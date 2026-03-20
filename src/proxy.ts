@@ -45,12 +45,6 @@ export function proxy(request: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
-  // Redirect authenticated users away from login to dashboard
-  if (isAuthRoute && sessionToken) {
-    const dashboardUrl = new URL(`/${locale}/dashboard`, request.url);
-    return NextResponse.redirect(dashboardUrl);
-  }
-
   return handleI18nRouting(request);
 }
 
