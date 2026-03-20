@@ -2,6 +2,8 @@ import { setRequestLocale } from "next-intl/server";
 import { LoginForm } from "@/components/auth/login-form";
 import { BarChart3 } from "lucide-react";
 import { Link } from "@/i18n/navigation";
+import { auth } from "@/lib/auth";
+import { redirect } from "next/navigation";
 
 export default async function LoginPage({
   params,
@@ -10,6 +12,11 @@ export default async function LoginPage({
 }) {
   const { locale } = await params;
   setRequestLocale(locale);
+
+  const session = await auth();
+  if (session?.user?.id) {
+    redirect(`/${locale}/dashboard`);
+  }
 
   return (
     <div className="relative flex min-h-screen">

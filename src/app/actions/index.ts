@@ -308,3 +308,69 @@ function generateAIResponse(
 
   return `I can help you analyze your trading performance! Here are some things you can ask me:\n\n- "How is my win rate?"\n- "Analyze my recent trades"\n- "What are my best performing setups?"\n- "Review my risk management"\n\nYou have ${totalTrades} trades recorded. Your current win rate is ${winRate}% with a total PnL of $${totalPnl.toFixed(2)}.`;
 }
+
+// ─── Journal trade (for synced trades) ───────────────────────────────────────
+
+export async function journalTrade(data: {
+  tradeId: string;
+  setupId: string | null;
+  customSetupName: string | null; // if user types a new setup name
+  confidenceLevel: number | null;
+  marketCondition: string | null;
+  setupReason: string | null;
+  psychology: string | null;
+  notes: string | null;
+}) {
+  const userId = await getAuthUserId();
+
+  // Verify trade belongs to user
+  const trade = await prisma.trade.findFirst({
+    where: { id: data.tradeId, userId },
+  });
+
+  if (!trade) {
+    throw new Error("Trade not found");
+  }
+
+  let setupId = data.setupId;
+
+  // If user typed a custom setup name, create it
+  if (!setupId && data.customSetupName?.trim()) {
+    const newSetup = await prisma.setup.create({
+      data: {
+        userId,
+        name: data.customSetupName.trim(),
+        color: "#3b82f6",
+      },
+    });
+    setupId = newSetup.id;
+  }
+
+  await prisma.trade.update({
+    where: { id: data.tradeId },
+    data: {
+      setupId: setupId || null,
+      confidenceLevel: data.confidenceLevel,
+      marketCondition: data.marketCondition,
+      setupReason: data.setupReason,
+      psychology: data.psychology,
+      notes: data.notes,
+      needsJournal: false,
+    },
+  });
+
+  revalidatePath("/dashboard");
+}
+
+// ─── Skip journal (dismiss without journaling) ──────────────────────────────
+
+export async function skipJournalTrade(tradeId: string) {
+  const userId = await getAuthUserId();
+
+  await prisma.trade.updateMany({
+    where: { id: tradeId, userId },
+    data: { needsJournal: false },
+  });
+
+  revalidatePath("/dashboard");
+}

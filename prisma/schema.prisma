@@ -21,6 +21,7 @@ model User {
   // Trial & subscription
   trialEndsAt DateTime?
   plan        String    @default("trial") // trial | pro | free
+  onboarded   Boolean   @default(false)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -79,6 +80,7 @@ model Exchange {
   apiSecret String
   passphrase String? // some exchanges require this
   isActive  Boolean  @default(true)
+  lastSyncAt DateTime? // when trades were last synced
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -112,6 +114,9 @@ model Trade {
   exchangeId String?
   setupId    String?
 
+  // External exchange trade ID for deduplication
+  externalTradeId String? @unique
+
   // Core trade fields
   symbol      String   // e.g. "BTCUSDT"
   side        String   // "long" | "short"
@@ -132,6 +137,10 @@ model Trade {
   marketCondition String? // trending, ranging, volatile, etc.
   confidenceLevel Int?    // 1-10 scale
   notes           String? // general notes
+
+  // Sync metadata
+  needsJournal Boolean @default(false) // true when synced from exchange, awaiting user journal entry
+  syncedAt     DateTime? // when last synced from exchange
 
   entryDate DateTime  @default(now())
   exitDate  DateTime?

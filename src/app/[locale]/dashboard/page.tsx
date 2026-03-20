@@ -32,6 +32,7 @@ export default async function DashboardPage({
         theme: true,
         plan: true,
         trialEndsAt: true,
+        onboarded: true,
       },
     }),
     prisma.trade.findMany({
@@ -56,6 +57,11 @@ export default async function DashboardPage({
 
   if (!user) {
     redirect("/login");
+  }
+
+  // Redirect non-onboarded users to onboarding flow
+  if (!user.onboarded) {
+    redirect(`/${locale}/onboard`);
   }
 
   return (

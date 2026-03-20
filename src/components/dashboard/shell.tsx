@@ -21,6 +21,7 @@ import { CalendarTab } from "@/components/dashboard/calendar-tab";
 import { SetupsTab } from "@/components/dashboard/setups-tab";
 import { SettingsTab } from "@/components/dashboard/settings-tab";
 import { AIChatPanel } from "@/components/dashboard/ai-chat-panel";
+import { TradeSync } from "@/components/dashboard/sync/trade-sync";
 import { cn } from "@/lib/utils";
 
 type Tab = "dashboard" | "calendar" | "setups" | "settings";
@@ -247,6 +248,12 @@ export function DashboardShell({
           AI
         </button>
       </div>
+
+      {/* Trade sync — auto-fetches from exchanges on mount */}
+      <TradeSync
+        setups={setups}
+        hasExchanges={exchanges.length > 0}
+      />
     </div>
   );
 }

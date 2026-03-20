@@ -5,7 +5,7 @@ import { NextRequest, NextResponse } from "next/server";
 const handleI18nRouting = createI18nMiddleware(routing);
 
 // Routes that require authentication
-const protectedPaths = ["/dashboard"];
+const protectedPaths = ["/dashboard", "/onboard"];
 // Routes only for non-authenticated users
 const authPaths = ["/login"];
 
@@ -45,7 +45,7 @@ export function proxy(request: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
-  // Redirect authenticated users away from auth pages to dashboard
+  // Redirect authenticated users away from login to dashboard
   if (isAuthRoute && sessionToken) {
     const dashboardUrl = new URL(`/${locale}/dashboard`, request.url);
     return NextResponse.redirect(dashboardUrl);
