@@ -1,0 +1,193 @@
+{
+  "metadata": {
+    "title": "TradeLog",
+    "description": "AI-Powered Trading Journal"
+  },
+  "common": {
+    "theme": "Theme",
+    "light": "Light",
+    "dark": "Dark",
+    "system": "System",
+    "language": "Language",
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "create": "Create",
+    "close": "Close",
+    "loading": "Loading...",
+    "noData": "No data available"
+  },
+  "home": {
+    "title": "Welcome to TradeLog",
+    "description": "Track and manage your trades efficiently."
+  },
+  "landing": {
+    "nav": {
+      "features": "Features",
+      "pricing": "Pricing",
+      "login": "Log In",
+      "getStarted": "Get Started"
+    },
+    "hero": {
+      "badge": "AI-Powered Trading Journal",
+      "title": "Master Your Trading with AI-Driven Insights",
+      "description": "Track every trade, analyze your performance with AI, and build winning strategies. The most comprehensive trading journal for crypto and forex traders.",
+      "cta": "Start Free Trial",
+      "secondaryCta": "Learn More"
+    },
+    "features": {
+      "title": "Everything You Need",
+      "subtitle": "Powerful tools to transform your trading",
+      "journal": "Trade Journal",
+      "journalDesc": "Log every trade with detailed entry/exit data, psychology notes, and market conditions.",
+      "analytics": "AI Analytics",
+      "analyticsDesc": "Get AI-powered insights on your trading patterns, win rates, and areas for improvement.",
+      "calendar": "PnL Calendar",
+      "calendarDesc": "Visualize your daily, weekly, and monthly performance at a glance.",
+      "setups": "Setup Tracking",
+      "setupsDesc": "Define and track your trading setups to find your most profitable strategies.",
+      "exchanges": "Exchange Sync",
+      "exchangesDesc": "Connect your exchange accounts to automatically import trades.",
+      "ai": "AI Chat",
+      "aiDesc": "Chat with AI about your trading performance and get personalized recommendations."
+    },
+    "stats": {
+      "traders": "Active Traders",
+      "trades": "Trades Logged",
+      "exchanges": "Exchanges Supported"
+    },
+    "cta": {
+      "title": "Ready to Level Up?",
+      "subtitle": "Start your 3-day free trial today. No credit card required.",
+      "button": "Get Started Free"
+    },
+    "footer": {
+      "rights": "All rights reserved.",
+      "privacy": "Privacy",
+      "terms": "Terms"
+    }
+  },
+  "login": {
+    "title": "Welcome Back",
+    "subtitle": "Sign in to your trading journal",
+    "googleButton": "Continue with Google",
+    "trial": "New users get a 3-day free trial",
+    "terms": "By signing in, you agree to our Terms and Privacy Policy."
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "calendar": "Calendar",
+    "setups": "Setups",
+    "settings": "Settings",
+    "aiChat": "AI Chat",
+    "trial": "Free Trial",
+    "trialDaysLeft": "{days} days remaining",
+    "signOut": "Sign out",
+    "stats": {
+      "winRate": "Win Rate",
+      "totalPnl": "Total PnL",
+      "totalTrades": "Total Trades",
+      "avgRR": "Avg R:R",
+      "riskToReward": "Risk to reward",
+      "closedTrades": "{count} closed trades",
+      "open": "{count} open"
+    },
+    "trades": {
+      "recentTrades": "Recent Trades",
+      "addTrade": "Add Trade",
+      "newTrade": "New Trade",
+      "noTrades": "No trades yet. Start by adding your first trade.",
+      "symbol": "Symbol",
+      "side": "Side",
+      "entry": "Entry",
+      "exit": "Exit",
+      "pnl": "PnL",
+      "status": "Status",
+      "setup": "Setup",
+      "date": "Date",
+      "entryPrice": "Entry Price",
+      "exitPrice": "Exit Price",
+      "quantity": "Quantity",
+      "leverage": "Leverage",
+      "stopLoss": "Stop Loss",
+      "takeProfit": "Take Profit",
+      "pnlDollar": "PnL ($)",
+      "pnlPercent": "PnL (%)",
+      "fees": "Fees",
+      "confidenceLevel": "Confidence (1-10)",
+      "entryDate": "Entry Date",
+      "exitDate": "Exit Date",
+      "marketCondition": "Market Condition",
+      "setupReason": "Setup Reason",
+      "psychology": "Psychology / Mindset",
+      "notes": "Notes",
+      "createTrade": "Create Trade",
+      "long": "Long",
+      "short": "Short",
+      "open": "Open",
+      "closed": "Closed",
+      "cancelled": "Cancelled",
+      "trending": "Trending",
+      "ranging": "Ranging",
+      "volatile": "Volatile",
+      "calm": "Calm",
+      "breakout": "Breakout"
+    },
+    "setupsTab": {
+      "title": "Trade Setups",
+      "subtitle": "Manage your favorite trading setups and track their performance",
+      "addSetup": "Add Setup",
+      "newSetup": "New Setup",
+      "editSetup": "Edit Setup",
+      "noSetups": "No setups yet. Create your first trading setup to start tracking performance by strategy.",
+      "name": "Name",
+      "description": "Description",
+      "rules": "Rules / Criteria",
+      "color": "Color",
+      "createSetup": "Create Setup",
+      "saveChanges": "Save Changes",
+      "winRate": "Win Rate",
+      "trades": "Trades"
+    },
+    "settingsTab": {
+      "language": "Language",
+      "theme": "Theme",
+      "exchanges": "Exchange Connections",
+      "addExchange": "Add Exchange",
+      "connectExchange": "Connect Exchange",
+      "exchangeName": "Exchange Name",
+      "apiKey": "API Key",
+      "apiSecret": "API Secret",
+      "passphrase": "Passphrase",
+      "passphraseOptional": "optional",
+      "apiWarning": "We recommend creating read-only API keys. Your keys are stored securely and are never shared.",
+      "connectButton": "Connect Exchange",
+      "noExchanges": "No exchanges connected yet. Add your exchange API keys to import trades automatically.",
+      "connected": "Connected",
+      "account": "Account",
+      "email": "Email",
+      "plan": "Plan",
+      "trialEnds": "Trial ends",
+      "pro": "Pro",
+      "free": "Free"
+    },
+    "chat": {
+      "title": "AI Chat",
+      "new": "New",
+      "aiAssistant": "AI Trading Assistant",
+      "aiDescription": "Get insights about your trading performance, patterns, and improvement areas.",
+      "startChat": "Start a Chat",
+      "placeholder": "Ask about your trades...",
+      "emptyChat": "Ask me about your trading performance, patterns, or areas for improvement.",
+      "error": "Sorry, something went wrong. Please try again."
+    },
+    "calendarTab": {
+      "title": "PnL Calendar",
+      "totalPnl": "Total PnL",
+      "tradingDays": "Trading Days",
+      "bestDay": "Best Day",
+      "worstDay": "Worst Day"
+    }
+  }
+}

@@ -1,0 +1,193 @@
+{
+  "metadata": {
+    "title": "TradeLog",
+    "description": "Diario de Trading con IA"
+  },
+  "common": {
+    "theme": "Tema",
+    "light": "Claro",
+    "dark": "Oscuro",
+    "system": "Sistema",
+    "language": "Idioma",
+    "save": "Guardar",
+    "cancel": "Cancelar",
+    "delete": "Eliminar",
+    "edit": "Editar",
+    "create": "Crear",
+    "close": "Cerrar",
+    "loading": "Cargando...",
+    "noData": "Sin datos disponibles"
+  },
+  "home": {
+    "title": "Bienvenido a TradeLog",
+    "description": "Rastrea y gestiona tus operaciones de manera eficiente."
+  },
+  "landing": {
+    "nav": {
+      "features": "Funciones",
+      "pricing": "Precios",
+      "login": "Iniciar Sesión",
+      "getStarted": "Empezar"
+    },
+    "hero": {
+      "badge": "Diario de Trading con IA",
+      "title": "Domina tu Trading con Análisis Impulsado por IA",
+      "description": "Registra cada operación, analiza tu rendimiento con IA y construye estrategias ganadoras. El diario de trading más completo para traders de crypto y forex.",
+      "cta": "Prueba Gratis",
+      "secondaryCta": "Saber Más"
+    },
+    "features": {
+      "title": "Todo lo que Necesitas",
+      "subtitle": "Herramientas poderosas para transformar tu trading",
+      "journal": "Diario de Operaciones",
+      "journalDesc": "Registra cada operación con datos detallados de entrada/salida, notas de psicología y condiciones de mercado.",
+      "analytics": "Análisis con IA",
+      "analyticsDesc": "Obtén insights impulsados por IA sobre tus patrones de trading, tasas de éxito y áreas de mejora.",
+      "calendar": "Calendario PnL",
+      "calendarDesc": "Visualiza tu rendimiento diario, semanal y mensual de un vistazo.",
+      "setups": "Seguimiento de Setups",
+      "setupsDesc": "Define y rastrea tus setups de trading para encontrar tus estrategias más rentables.",
+      "exchanges": "Sync de Exchanges",
+      "exchangesDesc": "Conecta tus cuentas de exchange para importar operaciones automáticamente.",
+      "ai": "Chat IA",
+      "aiDesc": "Chatea con IA sobre tu rendimiento de trading y obtén recomendaciones personalizadas."
+    },
+    "stats": {
+      "traders": "Traders Activos",
+      "trades": "Operaciones Registradas",
+      "exchanges": "Exchanges Soportados"
+    },
+    "cta": {
+      "title": "¿Listo para Subir de Nivel?",
+      "subtitle": "Comienza tu prueba gratis de 3 días hoy. Sin tarjeta de crédito.",
+      "button": "Empezar Gratis"
+    },
+    "footer": {
+      "rights": "Todos los derechos reservados.",
+      "privacy": "Privacidad",
+      "terms": "Términos"
+    }
+  },
+  "login": {
+    "title": "Bienvenido de Nuevo",
+    "subtitle": "Inicia sesión en tu diario de trading",
+    "googleButton": "Continuar con Google",
+    "trial": "Los nuevos usuarios obtienen 3 días de prueba gratis",
+    "terms": "Al iniciar sesión, aceptas nuestros Términos y Política de Privacidad."
+  },
+  "dashboard": {
+    "title": "Panel",
+    "calendar": "Calendario",
+    "setups": "Setups",
+    "settings": "Configuración",
+    "aiChat": "Chat IA",
+    "trial": "Prueba Gratis",
+    "trialDaysLeft": "{days} días restantes",
+    "signOut": "Cerrar sesión",
+    "stats": {
+      "winRate": "Tasa de Éxito",
+      "totalPnl": "PnL Total",
+      "totalTrades": "Total Operaciones",
+      "avgRR": "R:R Promedio",
+      "riskToReward": "Riesgo a recompensa",
+      "closedTrades": "{count} operaciones cerradas",
+      "open": "{count} abiertas"
+    },
+    "trades": {
+      "recentTrades": "Operaciones Recientes",
+      "addTrade": "Agregar Operación",
+      "newTrade": "Nueva Operación",
+      "noTrades": "Sin operaciones aún. Comienza agregando tu primera operación.",
+      "symbol": "Símbolo",
+      "side": "Lado",
+      "entry": "Entrada",
+      "exit": "Salida",
+      "pnl": "PnL",
+      "status": "Estado",
+      "setup": "Setup",
+      "date": "Fecha",
+      "entryPrice": "Precio de Entrada",
+      "exitPrice": "Precio de Salida",
+      "quantity": "Cantidad",
+      "leverage": "Apalancamiento",
+      "stopLoss": "Stop Loss",
+      "takeProfit": "Take Profit",
+      "pnlDollar": "PnL ($)",
+      "pnlPercent": "PnL (%)",
+      "fees": "Comisiones",
+      "confidenceLevel": "Confianza (1-10)",
+      "entryDate": "Fecha de Entrada",
+      "exitDate": "Fecha de Salida",
+      "marketCondition": "Condición de Mercado",
+      "setupReason": "Razón del Setup",
+      "psychology": "Psicología / Mentalidad",
+      "notes": "Notas",
+      "createTrade": "Crear Operación",
+      "long": "Long",
+      "short": "Short",
+      "open": "Abierta",
+      "closed": "Cerrada",
+      "cancelled": "Cancelada",
+      "trending": "Tendencia",
+      "ranging": "Rango",
+      "volatile": "Volátil",
+      "calm": "Calma",
+      "breakout": "Ruptura"
+    },
+    "setupsTab": {
+      "title": "Setups de Trading",
+      "subtitle": "Gestiona tus setups favoritos y rastrea su rendimiento",
+      "addSetup": "Agregar Setup",
+      "newSetup": "Nuevo Setup",
+      "editSetup": "Editar Setup",
+      "noSetups": "Sin setups aún. Crea tu primer setup de trading para comenzar a rastrear el rendimiento por estrategia.",
+      "name": "Nombre",
+      "description": "Descripción",
+      "rules": "Reglas / Criterios",
+      "color": "Color",
+      "createSetup": "Crear Setup",
+      "saveChanges": "Guardar Cambios",
+      "winRate": "Tasa de Éxito",
+      "trades": "Operaciones"
+    },
+    "settingsTab": {
+      "language": "Idioma",
+      "theme": "Tema",
+      "exchanges": "Conexiones de Exchange",
+      "addExchange": "Agregar Exchange",
+      "connectExchange": "Conectar Exchange",
+      "exchangeName": "Nombre del Exchange",
+      "apiKey": "Clave API",
+      "apiSecret": "Secreto API",
+      "passphrase": "Frase de Paso",
+      "passphraseOptional": "opcional",
+      "apiWarning": "Recomendamos crear claves API de solo lectura. Tus claves se almacenan de forma segura y nunca se comparten.",
+      "connectButton": "Conectar Exchange",
+      "noExchanges": "Sin exchanges conectados aún. Agrega tus claves API del exchange para importar operaciones automáticamente.",
+      "connected": "Conectado",
+      "account": "Cuenta",
+      "email": "Correo electrónico",
+      "plan": "Plan",
+      "trialEnds": "La prueba termina",
+      "pro": "Pro",
+      "free": "Gratis"
+    },
+    "chat": {
+      "title": "Chat IA",
+      "new": "Nuevo",
+      "aiAssistant": "Asistente de Trading IA",
+      "aiDescription": "Obtén insights sobre tu rendimiento de trading, patrones y áreas de mejora.",
+      "startChat": "Iniciar Chat",
+      "placeholder": "Pregunta sobre tus operaciones...",
+      "emptyChat": "Pregúntame sobre tu rendimiento de trading, patrones o áreas de mejora.",
+      "error": "Lo siento, algo salió mal. Por favor intenta de nuevo."
+    },
+    "calendarTab": {
+      "title": "Calendario PnL",
+      "totalPnl": "PnL Total",
+      "tradingDays": "Días de Trading",
+      "bestDay": "Mejor Día",
+      "worstDay": "Peor Día"
+    }
+  }
+}
