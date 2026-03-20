@@ -76,6 +76,49 @@ export function TradeSync({ setups, hasExchanges }: TradeSyncProps) {
     runSync();
   }, [runSync]);
 
+  // Background Web Worker for precise background tracking sync polling
+  useEffect(() => {
+    if (!hasExchanges || typeof window === "undefined") return;
+
+    const worker = new Worker("/sync-worker.js");
+
+    worker.onmessage = (e) => {
+      if (e.data.type === "SYNC_SUCCESS") {
+        const { newTrades: returnedNew, closedTrades: returnedClosed } = e.data.payload;
+
+        if (returnedNew?.length > 0) {
+          setNewTrades((prev) => {
+            // Deduplicate to avoid stacking the same entries
+            const existingIds = new Set(prev.map((t) => t.id));
+            const uniqueNew = returnedNew.filter((t: any) => !existingIds.has(t.id));
+            return [...prev, ...uniqueNew];
+          });
+        }
+
+        if (returnedClosed?.length > 0) {
+          setClosedTrades((prev) => {
+            const existingIds = new Set(prev.map((t) => t.id));
+            const uniqueClosed = returnedClosed.filter((t: any) => !existingIds.has(t.id));
+            return [...prev, ...uniqueClosed];
+          });
+        }
+
+        if (returnedNew?.length > 0 || returnedClosed?.length > 0) {
+          router.refresh();
+        }
+      } else if (e.data.type === "SYNC_ERROR") {
+        setSyncError(e.data.payload);
+      }
+    };
+
+    worker.postMessage({ type: "START", payload: { interval: 30000 } }); // 30 second polling heartbeat
+
+    return () => {
+      worker.postMessage({ type: "STOP" });
+      worker.terminate();
+    };
+  }, [hasExchanges, router]);
+
   const handleNewTradesComplete = () => {
     setNewTrades([]);
     router.refresh();

@@ -3,6 +3,8 @@ import ccxt from "ccxt";
 import type { Exchange as CCXTExchange, Trade as CCXTTrade } from "ccxt";
 import { prisma } from "@/lib/prisma";
 
+const isDev = process.env.NODE_ENV === "development";
+
 // ─── Types ───────────────────────────────────────────────────────────────────
 
 export interface SyncedNewTrade {
@@ -78,33 +80,27 @@ function createCCXTExchange(
     config.password = passphrase;
   }
 
-  return new ExchangeClass(config);
-}
+  const exchange = new ExchangeClass(config);
 
-// ─── Fetch closed trades from exchange ───────────────────────────────────────
-
-async function fetchRecentClosedTrades(
-  exchange: CCXTExchange,
-  since?: number
-): Promise<CCXTTrade[]> {
-  const trades: CCXTTrade[] = [];
-
-  try {
-    // Fetch trades from the last 7 days if no since timestamp
-    const sinceTs = since || Date.now() - 7 * 24 * 60 * 60 * 1000;
-
-    if (exchange.has["fetchMyTrades"]) {
-      const fetched = await exchange.fetchMyTrades(undefined, sinceTs, 100);
-      trades.push(...fetched);
+  // In development, use sandbox/testnet endpoints instead of production
+  if (isDev) {
+    try {
+      exchange.enableDemoTrading(true);
+      console.log(
+        `[exchange] Sandbox mode enabled for ${exchangeName} (development)`
+      );
+    } catch {
+      // Not all exchanges support sandbox mode — fall through gracefully
+      console.warn(
+        `[exchange] ${exchangeName} does not support sandbox mode, using production endpoints`
+      );
     }
-  } catch (err) {
-    console.error(
-      `[exchange] Error fetching trades: ${err instanceof Error ? err.message : err}`
-    );
   }
 
-  return trades;
+  return exchange;
 }
+
+
 
 // ─── Fetch open positions ────────────────────────────────────────────────────
 
@@ -253,22 +249,19 @@ export async function syncUserTrades(userId: string): Promise<SyncResult> {
 
         if (!openPositionKeys.has(key)) {
           // Position no longer open on exchange — it was closed
-          // Fetch recent trades to find the closing details
           const sinceTs = dbTrade.entryDate.getTime();
-          const recentTrades = await fetchRecentClosedTrades(
-            ccxtExchange,
-            sinceTs
-          );
+          let closingTrades: CCXTTrade[] = [];
 
-          // Find closing trades for this symbol
-          const closingTrades = recentTrades.filter(
-            (t) =>
-              t.symbol === dbTrade.symbol &&
-              // Closing trade is opposite side, OR same symbol reduce
-              t.timestamp !== undefined &&
-              t.timestamp !== null &&
-              t.timestamp > sinceTs
-          );
+          try {
+            if (ccxtExchange.has["fetchMyTrades"]) {
+              const fetched = await ccxtExchange.fetchMyTrades(dbTrade.symbol, sinceTs, 100);
+              closingTrades = fetched.filter(
+                (t) => t.timestamp !== undefined && t.timestamp !== null && t.timestamp > sinceTs
+              );
+            }
+          } catch (err) {
+            console.error(`[exchange] Error fetching closing trades for ${dbTrade.symbol}:`, err);
+          }
 
           let exitPrice = dbTrade.entryPrice; // fallback
           let totalFees = dbTrade.fees || 0;
@@ -290,14 +283,13 @@ export async function syncUserTrades(userId: string): Promise<SyncResult> {
           // Calculate PnL
           const direction = dbTrade.side === "long" ? 1 : -1;
           const priceDiff = (exitPrice - dbTrade.entryPrice) * direction;
-          const rawPnl =
-            priceDiff * dbTrade.quantity * (dbTrade.leverage || 1);
+          const rawPnl = priceDiff * dbTrade.quantity; // Leverage doesn't multiply PnL, quantity is absolute
           const pnl = rawPnl - totalFees;
           const pnlPercent =
             dbTrade.entryPrice > 0
               ? (priceDiff / dbTrade.entryPrice) *
-                100 *
-                (dbTrade.leverage || 1)
+              100 *
+              (dbTrade.leverage || 1)
               : 0;
 
           // Update trade in DB

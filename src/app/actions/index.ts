@@ -282,11 +282,10 @@ function generateAIResponse(
     lowerMessage.includes("performance") ||
     lowerMessage.includes("how am i doing")
   ) {
-    return `Based on your recent ${totalTrades} trades:\n\n- **Win Rate:** ${winRate}%\n- **Total PnL:** $${totalPnl.toFixed(2)}\n- **Winning Trades:** ${winningTrades.length}/${closedTrades.length}\n\n${
-      parseFloat(winRate as string) >= 50
+    return `Based on your recent ${totalTrades} trades:\n\n- **Win Rate:** ${winRate}%\n- **Total PnL:** $${totalPnl.toFixed(2)}\n- **Winning Trades:** ${winningTrades.length}/${closedTrades.length}\n\n${parseFloat(winRate as string) >= 50
         ? "Your win rate is above 50%, which is a good foundation. Focus on improving your risk-reward ratio to maximize returns."
         : "Your win rate is below 50%. Consider reviewing your entry criteria and focusing on higher-probability setups."
-    }`;
+      }`;
   }
 
   if (

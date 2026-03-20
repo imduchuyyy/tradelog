@@ -69,6 +69,7 @@ export function DashboardShell({
     ? Math.max(
         0,
         Math.ceil(
+          // eslint-disable-next-line react-hooks/purity
           (new Date(user.trialEndsAt).getTime() - Date.now()) /
             (1000 * 60 * 60 * 24)
         )
@@ -214,7 +215,7 @@ export function DashboardShell({
           {/* AI Chat sidebar */}
           {chatOpen && (
             <aside className="w-80 border-l border-border/40 bg-card/20 lg:w-96">
-              <AIChatPanel chatSessions={chatSessions} />
+              <AIChatPanel chatSessions={chatSessions} user={user} />
             </aside>
           )}
         </div>
