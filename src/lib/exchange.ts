@@ -90,7 +90,6 @@ function createCCXTExchange(
         `[exchange] Sandbox mode enabled for ${exchangeName} (development)`
       );
     } catch {
-      // Not all exchanges support sandbox mode — fall through gracefully
       console.warn(
         `[exchange] ${exchangeName} does not support sandbox mode, using production endpoints`
       );
@@ -99,8 +98,6 @@ function createCCXTExchange(
 
   return exchange;
 }
-
-
 
 // ─── Fetch open positions ────────────────────────────────────────────────────
 
@@ -125,7 +122,7 @@ async function fetchOpenPositions(
 
       for (const pos of rawPositions) {
         const contracts = Math.abs(pos.contracts ?? 0);
-        if (contracts === 0) continue; // skip empty positions
+        if (contracts === 0) continue;
 
         positions.push({
           symbol: pos.symbol ?? "",
@@ -147,7 +144,7 @@ async function fetchOpenPositions(
   return positions;
 }
 
-// ─── Main sync logic ─────────────────────────────────────────────────────────
+// ─── Main sync logic (one-shot, used on page load) ──────────────────────────
 
 export async function syncUserTrades(userId: string): Promise<SyncResult> {
   const result: SyncResult = {
@@ -156,7 +153,6 @@ export async function syncUserTrades(userId: string): Promise<SyncResult> {
     errors: [],
   };
 
-  // Get all active exchanges for user
   const exchanges = await prisma.exchange.findMany({
     where: { userId, isActive: true },
   });
@@ -174,10 +170,9 @@ export async function syncUserTrades(userId: string): Promise<SyncResult> {
         dbExchange.passphrase
       );
 
-      // 1. Fetch open positions from exchange and detect NEW trades
+      // 1. Fetch open positions and detect NEW trades
       const openPositions = await fetchOpenPositions(ccxtExchange);
 
-      // Get existing open trades for this exchange
       const existingOpenTrades = await prisma.trade.findMany({
         where: {
           userId,
@@ -190,19 +185,41 @@ export async function syncUserTrades(userId: string): Promise<SyncResult> {
         existingOpenTrades.map((t) => [`${t.symbol}:${t.side}`, t])
       );
 
-      // Detect new positions (not in DB yet)
       for (const pos of openPositions) {
         const key = `${pos.symbol}:${pos.side}`;
         if (!existingSymbolSideMap.has(key)) {
-          // This is a NEW trade — insert it
           const externalId = `${dbExchange.name}:${pos.symbol}:${pos.side}:${pos.timestamp || Date.now()}`;
 
-          // Check if we already have this external ID (dedup)
           const existing = await prisma.trade.findUnique({
             where: { externalTradeId: externalId },
           });
 
           if (!existing) {
+            let entryFees = 0;
+            let actualEntryDate = pos.timestamp ? new Date(pos.timestamp) : new Date();
+
+            try {
+              if (ccxtExchange.has["fetchMyTrades"]) {
+                const recentTrades = await ccxtExchange.fetchMyTrades(pos.symbol, undefined, 50);
+                const orderSide = pos.side === "long" ? "buy" : "sell";
+                let accumulatedQty = 0;
+
+                for (let i = recentTrades.length - 1; i >= 0; i--) {
+                  const t = recentTrades[i];
+                  if (t.side === orderSide) {
+                    accumulatedQty += t.amount || 0;
+                    entryFees += (t.fee?.cost || 0);
+                    if (t.timestamp) actualEntryDate = new Date(t.timestamp);
+                    if (accumulatedQty >= pos.contracts * 0.99) break;
+                  } else if (accumulatedQty > 0) {
+                    break;
+                  }
+                }
+              }
+            } catch (err) {
+              console.error(`[exchange] Error fetching entry trades for ${pos.symbol}:`, err);
+            }
+
             const trade = await prisma.trade.create({
               data: {
                 userId,
@@ -216,9 +233,8 @@ export async function syncUserTrades(userId: string): Promise<SyncResult> {
                 leverage: pos.leverage,
                 needsJournal: true,
                 syncedAt: new Date(),
-                entryDate: pos.timestamp
-                  ? new Date(pos.timestamp)
-                  : new Date(),
+                entryDate: actualEntryDate,
+                fees: entryFees,
               },
             });
 
@@ -230,7 +246,7 @@ export async function syncUserTrades(userId: string): Promise<SyncResult> {
               entryPrice: pos.entryPrice,
               quantity: pos.contracts,
               leverage: pos.leverage,
-              fees: 0,
+              fees: entryFees,
               entryDate: trade.entryDate,
               exchangeId: dbExchange.id,
               exchangeName: dbExchange.name,
@@ -239,7 +255,7 @@ export async function syncUserTrades(userId: string): Promise<SyncResult> {
         }
       }
 
-      // 2. Check if any existing open trades have been CLOSED
+      // 2. Detect CLOSED positions
       const openPositionKeys = new Set(
         openPositions.map((p) => `${p.symbol}:${p.side}`)
       );
@@ -248,51 +264,83 @@ export async function syncUserTrades(userId: string): Promise<SyncResult> {
         const key = `${dbTrade.symbol}:${dbTrade.side}`;
 
         if (!openPositionKeys.has(key)) {
-          // Position no longer open on exchange — it was closed
           const sinceTs = dbTrade.entryDate.getTime();
           let closingTrades: CCXTTrade[] = [];
+          let allFetchedTrades: CCXTTrade[] = [];
 
           try {
             if (ccxtExchange.has["fetchMyTrades"]) {
-              const fetched = await ccxtExchange.fetchMyTrades(dbTrade.symbol, sinceTs, 100);
+              const fetched = await ccxtExchange.fetchMyTrades(
+                dbTrade.symbol,
+                sinceTs,
+                100
+              );
+              allFetchedTrades = fetched.filter(
+                (t) => t.timestamp !== undefined && t.timestamp !== null && t.timestamp >= sinceTs
+              );
               closingTrades = fetched.filter(
-                (t) => t.timestamp !== undefined && t.timestamp !== null && t.timestamp > sinceTs
+                (t) =>
+                  t.timestamp !== undefined &&
+                  t.timestamp !== null &&
+                  t.timestamp > sinceTs
               );
             }
           } catch (err) {
-            console.error(`[exchange] Error fetching closing trades for ${dbTrade.symbol}:`, err);
+            console.error(
+              `[exchange] Error fetching closing trades for ${dbTrade.symbol}:`,
+              err
+            );
           }
 
-          let exitPrice = dbTrade.entryPrice; // fallback
+          let exitPrice = dbTrade.entryPrice;
+          
           let totalFees = dbTrade.fees || 0;
+          if (closingTrades.length > 0) {
+            totalFees += closingTrades.reduce((sum, t) => sum + (t.fee?.cost || 0), 0);
+          }
+
           let exitDate = new Date();
+          let pnl = 0;
+          let exchangeProvidedPnl = false;
 
           if (closingTrades.length > 0) {
-            // Use the last trade as the exit
             const lastTrade = closingTrades[closingTrades.length - 1];
             exitPrice = lastTrade.price;
-            totalFees += closingTrades.reduce(
-              (sum, t) => sum + (t.fee?.cost || 0),
-              0
-            );
-            exitDate = lastTrade.timestamp
-              ? new Date(lastTrade.timestamp)
-              : new Date();
+            exitDate = lastTrade.timestamp ? new Date(lastTrade.timestamp) : new Date();
+
+            let sumRealizedPnl = 0;
+            let foundRealizedPnl = false;
+            
+            for (const t of closingTrades) {
+              const rawPnl = t.info?.realizedPnl !== undefined ? t.info.realizedPnl : t.info?.realized_pnl;
+              if (rawPnl !== undefined && rawPnl !== null) {
+                sumRealizedPnl += parseFloat(rawPnl);
+                foundRealizedPnl = true;
+              }
+            }
+
+            if (foundRealizedPnl) {
+              // CCXT/Binance realizedPnl aligns with their gross Realized Profit metric.
+              // To get accurate Net PnL as desired, subtract all transaction fees across the full cycle.
+              pnl = sumRealizedPnl - totalFees;
+              exchangeProvidedPnl = true;
+            }
           }
 
-          // Calculate PnL
           const direction = dbTrade.side === "long" ? 1 : -1;
           const priceDiff = (exitPrice - dbTrade.entryPrice) * direction;
-          const rawPnl = priceDiff * dbTrade.quantity; // Leverage doesn't multiply PnL, quantity is absolute
-          const pnl = rawPnl - totalFees;
+
+          if (!exchangeProvidedPnl) {
+            const rawPnl = priceDiff * dbTrade.quantity;
+            pnl = rawPnl - totalFees;
+          }
           const pnlPercent =
             dbTrade.entryPrice > 0
               ? (priceDiff / dbTrade.entryPrice) *
-              100 *
-              (dbTrade.leverage || 1)
+                100 *
+                (dbTrade.leverage || 1)
               : 0;
 
-          // Update trade in DB
           await prisma.trade.update({
             where: { id: dbTrade.id },
             data: {
@@ -320,7 +368,6 @@ export async function syncUserTrades(userId: string): Promise<SyncResult> {
         }
       }
 
-      // Update last sync time
       await prisma.exchange.update({
         where: { id: dbExchange.id },
         data: { lastSyncAt: new Date() },
@@ -333,19 +380,4 @@ export async function syncUserTrades(userId: string): Promise<SyncResult> {
   }
 
   return result;
-}
-
-// ─── Check and close open positions (lighter check) ──────────────────────────
-
-export async function checkOpenPositions(userId: string): Promise<{
-  closedTrades: ClosedTradeUpdate[];
-  errors: string[];
-}> {
-  // This is a lighter version that only checks open trades, not looking for new ones
-  // Used as part of the sync flow
-  const fullSync = await syncUserTrades(userId);
-  return {
-    closedTrades: fullSync.closedTrades,
-    errors: fullSync.errors,
-  };
 }

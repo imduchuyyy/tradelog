@@ -28,6 +28,7 @@ export function TradeSync({ setups, hasExchanges }: TradeSyncProps) {
   const [syncError, setSyncError] = useState<string | null>(null);
   const hasSynced = useRef(false);
 
+  // ── Initial one-shot sync on page load ─────────────────────────────────────
   const runSync = useCallback(async () => {
     if (!hasExchanges) return;
     if (syncing) return;
@@ -55,7 +56,6 @@ export function TradeSync({ setups, hasExchanges }: TradeSyncProps) {
         setSyncError(result.errors[0]);
       }
 
-      // Refresh the page data if we got any changes
       if (result.newTrades.length > 0 || result.closedTrades.length > 0) {
         router.refresh();
       }
@@ -69,49 +69,54 @@ export function TradeSync({ setups, hasExchanges }: TradeSyncProps) {
     }
   }, [hasExchanges, syncing, router]);
 
-  // Auto-sync on mount (once)
+  // Run once on mount
   useEffect(() => {
     if (hasSynced.current) return;
     hasSynced.current = true;
     runSync();
   }, [runSync]);
 
-  // Background Web Worker for precise background tracking sync polling
+  // ── Background worker: polls /api/trades/sync every 60s ────────────────────
+  // The worker only posts a message when new or closed trades are detected,
+  // so the UI stays quiet between changes.
   useEffect(() => {
     if (!hasExchanges || typeof window === "undefined") return;
 
     const worker = new Worker("/sync-worker.js");
 
     worker.onmessage = (e) => {
-      if (e.data.type === "SYNC_SUCCESS") {
-        const { newTrades: returnedNew, closedTrades: returnedClosed } = e.data.payload;
+      const { type, payload } = e.data;
 
-        if (returnedNew?.length > 0) {
+      if (type === "SYNC_RESULT") {
+        const { newTrades: incoming, closedTrades: closed } = payload;
+
+        if (incoming?.length > 0) {
           setNewTrades((prev) => {
-            // Deduplicate to avoid stacking the same entries
-            const existingIds = new Set(prev.map((t) => t.id));
-            const uniqueNew = returnedNew.filter((t: any) => !existingIds.has(t.id));
-            return [...prev, ...uniqueNew];
+            const ids = new Set(prev.map((t) => t.id));
+            const unique = incoming.filter((t: any) => !ids.has(t.id));
+            return unique.length > 0 ? [...prev, ...unique] : prev;
           });
         }
 
-        if (returnedClosed?.length > 0) {
+        if (closed?.length > 0) {
           setClosedTrades((prev) => {
-            const existingIds = new Set(prev.map((t) => t.id));
-            const uniqueClosed = returnedClosed.filter((t: any) => !existingIds.has(t.id));
-            return [...prev, ...uniqueClosed];
+            const ids = new Set(prev.map((t) => t.id));
+            const unique = closed.filter((t: any) => !ids.has(t.id));
+            return unique.length > 0 ? [...prev, ...unique] : prev;
           });
         }
 
-        if (returnedNew?.length > 0 || returnedClosed?.length > 0) {
+        if (incoming?.length > 0 || closed?.length > 0) {
           router.refresh();
         }
-      } else if (e.data.type === "SYNC_ERROR") {
-        setSyncError(e.data.payload);
+      } else if (type === "SYNC_ERROR") {
+        setSyncError(payload);
       }
     };
 
-    worker.postMessage({ type: "START", payload: { interval: 30000 } }); // 30 second polling heartbeat
+    // Start background polling (first poll fires after 60s since initial
+    // sync already runs on mount)
+    worker.postMessage({ type: "START", payload: { interval: 60000 } });
 
     return () => {
       worker.postMessage({ type: "STOP" });
