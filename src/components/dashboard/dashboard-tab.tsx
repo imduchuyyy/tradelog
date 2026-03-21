@@ -308,7 +308,7 @@ export function DashboardTab({ trades, setups }: DashboardTabProps) {
           </div>
           <div className="flex flex-col items-center justify-center flex-1 px-3">
             <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">Avg Loss</span>
-            <span className="text-xl font-bold text-red-500">{formatMoney(Math.abs(metrics.avgLoss))}</span>
+            <span className="text-xl font-bold text-red-500">{formatMoney(metrics.avgLoss)}</span>
           </div>
           <div className="flex flex-col items-center justify-center flex-1 px-3">
             <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">Best</span>
@@ -316,7 +316,7 @@ export function DashboardTab({ trades, setups }: DashboardTabProps) {
           </div>
           <div className="flex flex-col items-center justify-center flex-1 px-3">
             <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">Worst</span>
-            <span className="text-xl font-bold text-red-500">{formatMoney(Math.abs(metrics.worstTrade))}</span>
+            <span className="text-xl font-bold text-red-500">{formatMoney(metrics.worstTrade)}</span>
           </div>
         </CardContent>
       </Card>
