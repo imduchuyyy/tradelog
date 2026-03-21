@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { NewTradesModal } from "./new-trades-modal";
-import { ClosedTradesNotification } from "./closed-trades-notification";
+import { CloseTradeModal } from "./close-trade-modal";
 import { Loader2, RefreshCw } from "lucide-react";
 import type { SyncedNewTrade, ClosedTradeUpdate } from "@/lib/exchange";
 
@@ -170,11 +170,11 @@ export function TradeSync({ setups, hasExchanges }: TradeSyncProps) {
         />
       )}
 
-      {/* Closed trades notification */}
+      {/* Closed trades journal modal */}
       {closedTrades.length > 0 && (
-        <ClosedTradesNotification
+        <CloseTradeModal
           trades={closedTrades}
-          onDismiss={handleClosedDismiss}
+          onComplete={handleClosedDismiss}
         />
       )}
     </>

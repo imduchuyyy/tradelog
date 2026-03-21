@@ -4,10 +4,12 @@ import React, { useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ChevronDown, ChevronRight, Calendar as CalendarIcon, Target, TrendingUp, DollarSign, BarChart2, Filter } from "lucide-react";
+import { ChevronDown, ChevronRight, Calendar as CalendarIcon, Target, TrendingUp, DollarSign, BarChart2, Filter, Edit, CheckSquare } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { Bar, BarChart, CartesianGrid, Line, LineChart, XAxis, YAxis, Cell } from "recharts";
+import { NewTradesModal } from "./sync/new-trades-modal";
+import { CloseTradeModal } from "./sync/close-trade-modal";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 interface DashboardTabProps {
@@ -15,7 +17,7 @@ interface DashboardTabProps {
   setups?: any[];
 }
 
-export function DashboardTab({ trades }: DashboardTabProps) {
+export function DashboardTab({ trades, setups }: DashboardTabProps) {
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
 
   const toggleRow = (id: string) => {
@@ -28,6 +30,9 @@ export function DashboardTab({ trades }: DashboardTabProps) {
     setExpandedRows(newExpanded);
   };
 
+  const [editingTrade, setEditingTrade] = useState<any>(null);
+  const [closingTrade, setClosingTrade] = useState<any>(null);
+
   // --- Data Processing ---
   const { metrics, chartsData } = useMemo(() => {
     // Sort all trades chronological and cast Prisma Decimals to Numbers
@@ -37,7 +42,7 @@ export function DashboardTab({ trades }: DashboardTabProps) {
       entryPrice: t.entryPrice ? Number(t.entryPrice) : 0,
       exitPrice: t.exitPrice ? Number(t.exitPrice) : 0
     })).sort((a, b) => new Date(a.entryDate).getTime() - new Date(b.entryDate).getTime());
-    
+
     const closed = sorted.filter((t) => t.status === "closed");
     const wins = closed.filter((t) => t.pnl && t.pnl > 0);
     const losses = closed.filter((t) => t.pnl !== null && t.pnl <= 0);
@@ -46,7 +51,7 @@ export function DashboardTab({ trades }: DashboardTabProps) {
     const totalPnl = closed.reduce((sum, t) => sum + (t.pnl || 0), 0);
     const bestTrade = closed.reduce((max, t) => Math.max(max, t.pnl || 0), 0);
     const worstTrade = closed.reduce((min, t) => Math.min(min, t.pnl || 0), 0);
-    
+
     const avgWin = wins.length > 0 ? wins.reduce((sum, t) => sum + (t.pnl || 0), 0) / wins.length : 0;
     const avgLoss = losses.length > 0 ? losses.reduce((sum, t) => sum + (t.pnl || 0), 0) / losses.length : 0;
 
@@ -108,6 +113,13 @@ export function DashboardTab({ trades }: DashboardTabProps) {
 
   const pnlColor = (val: number) => val >= 0 ? "text-green-500" : "text-red-500";
   const formatMoney = (val: number) => `${val >= 0 ? "+" : "-"}$${Math.abs(val).toFixed(2)}`;
+
+  const getConfidenceColor = (level?: number | null) => {
+    if (!level) return "bg-green-500/10 text-green-500 border-green-500/20";
+    if (level >= 8) return "bg-green-500/10 text-green-500 border-green-500/20";
+    if (level >= 5) return "bg-yellow-500/10 text-yellow-500 border-yellow-500/20";
+    return "bg-red-500/10 text-red-500 border-red-500/20";
+  };
 
   return (
     <div className="space-y-6 pb-12">
@@ -319,14 +331,14 @@ export function DashboardTab({ trades }: DashboardTabProps) {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border/20 text-left">
-                  <th className="pb-4 font-medium text-muted-foreground/70"><div className="flex items-center gap-1.5">Symbol <Filter className="h-3.5 w-3.5"/></div></th>
-                  <th className="pb-4 font-medium text-muted-foreground/70"><div className="flex items-center gap-1.5">Market <Filter className="h-3.5 w-3.5"/></div></th>
-                  <th className="pb-4 font-medium text-muted-foreground/70"><div className="flex items-center gap-1.5">Side <Filter className="h-3.5 w-3.5"/></div></th>
-                  <th className="pb-4 font-medium text-muted-foreground/70"><div className="flex items-center gap-1.5">Status <Filter className="h-3.5 w-3.5"/></div></th>
-                  <th className="pb-4 font-medium text-muted-foreground/70"><div className="flex items-center gap-1.5">Entry <Filter className="h-3.5 w-3.5"/></div></th>
-                  <th className="pb-4 font-medium text-muted-foreground/70"><div className="flex items-center gap-1.5">Exit <Filter className="h-3.5 w-3.5"/></div></th>
-                  <th className="pb-4 font-medium text-muted-foreground/70"><div className="flex items-center gap-1.5">PnL <Filter className="h-3.5 w-3.5"/></div></th>
-                  <th className="pb-4 font-medium text-muted-foreground/70">Journal</th>
+                  <th className="pb-4 font-medium text-muted-foreground/70"><div className="flex items-center gap-1.5">Symbol <Filter className="h-3.5 w-3.5" /></div></th>
+                  <th className="pb-4 font-medium text-muted-foreground/70"><div className="flex items-center gap-1.5">Market <Filter className="h-3.5 w-3.5" /></div></th>
+                  <th className="pb-4 font-medium text-muted-foreground/70"><div className="flex items-center gap-1.5">Side <Filter className="h-3.5 w-3.5" /></div></th>
+                  <th className="pb-4 font-medium text-muted-foreground/70"><div className="flex items-center gap-1.5">Status <Filter className="h-3.5 w-3.5" /></div></th>
+                  <th className="pb-4 font-medium text-muted-foreground/70"><div className="flex items-center gap-1.5">Entry <Filter className="h-3.5 w-3.5" /></div></th>
+                  <th className="pb-4 font-medium text-muted-foreground/70"><div className="flex items-center gap-1.5">Exit <Filter className="h-3.5 w-3.5" /></div></th>
+                  <th className="pb-4 font-medium text-muted-foreground/70"><div className="flex items-center gap-1.5">PnL <Filter className="h-3.5 w-3.5" /></div></th>
+                  <th className="pb-4 font-medium text-muted-foreground/70">Confidence</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border/10">
@@ -337,10 +349,10 @@ export function DashboardTab({ trades }: DashboardTabProps) {
                 ) : (
                   trades.map((trade) => {
                     const isExpanded = expandedRows.has(trade.id);
-                    
+
                     return (
                       <React.Fragment key={trade.id}>
-                        <tr 
+                        <tr
                           onClick={() => toggleRow(trade.id)}
                           className="group hover:bg-muted/10 transition-colors cursor-pointer"
                         >
@@ -380,8 +392,8 @@ export function DashboardTab({ trades }: DashboardTabProps) {
                             {trade.pnl ? formatMoney(trade.pnl) : "-"}
                           </td>
                           <td className="py-4 text-sm">
-                            {trade.notes || trade.setupReason ? (
-                              <Badge variant="outline" className="text-[10px] bg-green-500/10 text-green-500 border-green-500/20 rounded px-2 font-semibold">
+                            {(trade.confidenceLevel || trade.notes || trade.setupReason) ? (
+                              <Badge variant="outline" className={cn("text-[10px] rounded px-2 font-semibold", getConfidenceColor(trade.confidenceLevel))}>
                                 {trade.confidenceLevel || 6}/10
                               </Badge>
                             ) : (
@@ -389,7 +401,7 @@ export function DashboardTab({ trades }: DashboardTabProps) {
                             )}
                           </td>
                         </tr>
-                        
+
                         {/* Expanded details row */}
                         {isExpanded && (
                           <tr className="bg-muted/5 border-b border-border/20">
@@ -409,12 +421,12 @@ export function DashboardTab({ trades }: DashboardTabProps) {
                                     <div className="flex items-center gap-2">
                                       <div className="flex gap-1.5">
                                         {Array.from({ length: 10 }).map((_, i) => (
-                                          <div 
-                                            key={i} 
+                                          <div
+                                            key={i}
                                             className={cn(
-                                              "h-2 w-2 rounded-full", 
+                                              "h-2 w-2 rounded-full",
                                               i < (trade.confidenceLevel || 0) ? "bg-green-500" : "bg-muted-foreground/20"
-                                            )} 
+                                            )}
                                           />
                                         ))}
                                       </div>
@@ -439,8 +451,44 @@ export function DashboardTab({ trades }: DashboardTabProps) {
                                     <p className="text-[11px] uppercase text-muted-foreground tracking-wider mb-1.5 font-semibold">Notes</p>
                                     <p className="text-sm text-muted-foreground">{trade.notes || "No notes available."}</p>
                                   </div>
+                                  <div className="pt-4 flex items-center gap-3">
+                                    <Button size="sm" variant="outline" onClick={(e) => { e.stopPropagation(); setEditingTrade(trade); }} className="gap-2 h-8 text-xs">
+                                      <Edit className="h-3.5 w-3.5" />
+                                      {trade.confidenceLevel ? "Edit Entry Journal" : "Add Entry Journal"}
+                                    </Button>
+
+                                    {trade.status === "closed" && (
+                                      <Button size="sm" variant="outline" onClick={(e) => { e.stopPropagation(); setClosingTrade(trade); }} className="gap-2 h-8 text-xs">
+                                        <CheckSquare className="h-3.5 w-3.5" />
+                                        {trade.exitReason ? "Edit Exit Journal" : "Add Exit Journal"}
+                                      </Button>
+                                    )}
+                                  </div>
                                 </div>
                               </div>
+
+                              {trade.status === "closed" && (
+                                <div className="mt-6 pt-6 border-t border-border/40 border-dashed">
+                                  <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+                                    <div>
+                                      <p className="text-[11px] uppercase text-muted-foreground tracking-wider mb-1.5 font-semibold">Exit Reason</p>
+                                      <p className="text-sm font-medium">{trade.exitReason || "-"}</p>
+                                    </div>
+                                    <div>
+                                      <p className="text-[11px] uppercase text-muted-foreground tracking-wider mb-1.5 font-semibold">Exit Emotion</p>
+                                      <p className="text-sm font-medium">{trade.exitPsychology || "-"}</p>
+                                    </div>
+                                    <div>
+                                      <p className="text-[11px] uppercase text-muted-foreground tracking-wider mb-1.5 font-semibold">Mistakes</p>
+                                      <p className="text-sm text-muted-foreground">{trade.mistakes || "-"}</p>
+                                    </div>
+                                    <div>
+                                      <p className="text-[11px] uppercase text-muted-foreground tracking-wider mb-1.5 font-semibold">Lessons</p>
+                                      <p className="text-sm text-muted-foreground">{trade.lessons || "-"}</p>
+                                    </div>
+                                  </div>
+                                </div>
+                              )}
                             </td>
                           </tr>
                         )}
@@ -464,6 +512,21 @@ export function DashboardTab({ trades }: DashboardTabProps) {
           </div>
         </CardContent>
       </Card>
+
+      {editingTrade && (
+        <NewTradesModal
+          trades={[editingTrade]}
+          setups={setups || []}
+          onComplete={() => setEditingTrade(null)}
+        />
+      )}
+
+      {closingTrade && (
+        <CloseTradeModal
+          trades={[closingTrade]}
+          onComplete={() => setClosingTrade(null)}
+        />
+      )}
     </div>
   );
 }

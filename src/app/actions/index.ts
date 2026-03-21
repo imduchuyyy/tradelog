@@ -373,3 +373,36 @@ export async function skipJournalTrade(tradeId: string) {
 
   revalidatePath("/dashboard");
 }
+
+// ─── Close trade journal ────────────────────────────────────────────────────
+
+export async function closeTradeJournal(data: {
+  tradeId: string;
+  exitReason: string | null;
+  exitPsychology: string | null;
+  mistakes: string | null;
+  lessons: string | null;
+}) {
+  const userId = await getAuthUserId();
+
+  const trade = await prisma.trade.findFirst({
+    where: { id: data.tradeId, userId },
+  });
+
+  if (!trade) {
+    throw new Error("Trade not found");
+  }
+
+  await prisma.trade.update({
+    where: { id: data.tradeId },
+    data: {
+      exitReason: data.exitReason,
+      exitPsychology: data.exitPsychology,
+      mistakes: data.mistakes,
+      lessons: data.lessons,
+      status: "closed", // automatically mark as closed if journaling exit
+    },
+  });
+
+  revalidatePath("/dashboard");
+}

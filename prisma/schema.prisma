@@ -138,6 +138,12 @@ model Trade {
   confidenceLevel Int?    // 1-10 scale
   notes           String? // general notes
 
+  // Post-trade / closing journaling fields
+  exitReason      String?
+  exitPsychology  String?
+  mistakes        String?
+  lessons         String?
+
   // Sync metadata
   needsJournal Boolean @default(false) // true when synced from exchange, awaiting user journal entry
   syncedAt     DateTime? // when last synced from exchange
