@@ -8,17 +8,18 @@ import { ChevronDown, ChevronRight, Calendar as CalendarIcon, Target, TrendingUp
 import { cn } from "@/lib/utils";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { Bar, BarChart, CartesianGrid, Line, LineChart, XAxis, YAxis, Cell } from "recharts";
-import { NewTradesModal } from "./sync/new-trades-modal";
-import { CloseTradeModal } from "./sync/close-trade-modal";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 interface DashboardTabProps {
   trades: any[];
   setups?: any[];
+  conditions?: any[];
+  onOpenChat?: (context: any) => void;
 }
 
-export function DashboardTab({ trades, setups }: DashboardTabProps) {
+export function DashboardTab({ trades, setups, conditions = [], onOpenChat }: DashboardTabProps) {
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
+  const [conditionFilter, setConditionFilter] = useState<string>("all");
 
   const toggleRow = (id: string) => {
     const newExpanded = new Set(expandedRows);
@@ -30,13 +31,18 @@ export function DashboardTab({ trades, setups }: DashboardTabProps) {
     setExpandedRows(newExpanded);
   };
 
-  const [editingTrade, setEditingTrade] = useState<any>(null);
-  const [closingTrade, setClosingTrade] = useState<any>(null);
-
   // --- Data Processing ---
   const { metrics, chartsData } = useMemo(() => {
-    // Sort all trades chronological and cast Prisma Decimals to Numbers
-    const sorted = [...trades].map(t => ({
+    // 1. Filter by Condition
+    let filteredTrades = [...trades];
+    if (conditionFilter !== "all") {
+      filteredTrades = filteredTrades.filter(t => 
+        t.conditions?.some((c: any) => c.id === conditionFilter) ||
+        (t.setup?.conditions?.some((c: any) => c.id === conditionFilter))
+      );
+    }
+    // Sort chronological and cast Prisma Decimals to Numbers
+    const sorted = filteredTrades.map(t => ({
       ...t,
       pnl: t.pnl ? Number(t.pnl) : 0,
       entryPrice: t.entryPrice ? Number(t.entryPrice) : 0,
@@ -54,6 +60,7 @@ export function DashboardTab({ trades, setups }: DashboardTabProps) {
 
     const avgWin = wins.length > 0 ? wins.reduce((sum, t) => sum + (t.pnl || 0), 0) / wins.length : 0;
     const avgLoss = losses.length > 0 ? losses.reduce((sum, t) => sum + (t.pnl || 0), 0) / losses.length : 0;
+    const riskReward = avgLoss !== 0 ? Math.abs(avgWin / avgLoss) : 0;
 
     // Charts: Cumulative
     let runningPnl = 0;
@@ -65,20 +72,40 @@ export function DashboardTab({ trades, setups }: DashboardTabProps) {
       };
     });
 
-    // Charts: Daily PnL
-    const dailyMap = new Map<string, number>();
+    // Charts: Setup Performance
+    const setupMap = new Map<string, { pnl: number, wins: number, total: number }>();
     closed.forEach(t => {
-      const d = new Date(t.entryDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
-      dailyMap.set(d, (dailyMap.get(d) || 0) + (t.pnl || 0));
+      const sName = t.setup?.name || "No Setup";
+      const existing = setupMap.get(sName) || { pnl: 0, wins: 0, total: 0 };
+      existing.pnl += (t.pnl || 0);
+      existing.total++;
+      if (t.pnl && t.pnl > 0) existing.wins++;
+      setupMap.set(sName, existing);
     });
-    const daily = Array.from(dailyMap.entries()).map(([date, pnl]) => ({ date, pnl }));
+    const setupsData = Array.from(setupMap.entries()).map(([name, stats]) => ({
+      name,
+      pnl: stats.pnl,
+      winRate: (stats.wins / stats.total) * 100
+    })).sort((a, b) => b.pnl - a.pnl).slice(0, 8);
 
-    // Charts: Symbol PnL
-    const symbolMap = new Map<string, number>();
+    // Charts: Condition Performance
+    const condMap = new Map<string, { pnl: number, wins: number, total: number }>();
     closed.forEach(t => {
-      symbolMap.set(t.symbol, (symbolMap.get(t.symbol) || 0) + (t.pnl || 0));
+      const tradeConditions = t.conditions || [];
+      if (tradeConditions.length === 0) return;
+      tradeConditions.forEach((c: any) => {
+        const existing = condMap.get(c.name) || { pnl: 0, wins: 0, total: 0 };
+        existing.pnl += (t.pnl || 0);
+        existing.total++;
+        if (t.pnl && t.pnl > 0) existing.wins++;
+        condMap.set(c.name, existing);
+      });
     });
-    const symbols = Array.from(symbolMap.entries()).map(([symbol, pnl]) => ({ symbol, pnl }));
+    const conditionsData = Array.from(condMap.entries()).map(([name, stats]) => ({
+      name,
+      pnl: stats.pnl,
+      winRate: (stats.wins / stats.total) * 100
+    })).sort((a, b) => b.pnl - a.pnl).slice(0, 8);
 
     // Charts: Win Rate over time
     let winCount = 0;
@@ -92,7 +119,7 @@ export function DashboardTab({ trades, setups }: DashboardTabProps) {
 
     return {
       metrics: {
-        totalTrades: trades.length,
+        totalTrades: filteredTrades.length,
         winRate,
         totalPnl,
         bestTrade,
@@ -100,16 +127,17 @@ export function DashboardTab({ trades, setups }: DashboardTabProps) {
         wins: wins.length,
         losses: losses.length,
         avgWin,
-        avgLoss
+        avgLoss,
+        riskReward
       },
       chartsData: {
         cumulative,
-        daily,
-        symbols,
+        setupsData,
+        conditionsData,
         winRateData
       }
     };
-  }, [trades]);
+  }, [trades, conditionFilter]);
 
   const pnlColor = (val: number) => val >= 0 ? "text-green-500" : "text-red-500";
   const formatMoney = (val: number) => `${val >= 0 ? "+" : "-"}$${Math.abs(val).toFixed(2)}`;
@@ -126,11 +154,26 @@ export function DashboardTab({ trades, setups }: DashboardTabProps) {
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-2xl font-bold tracking-tight">Trading Overview</h2>
-        <Button variant="outline" size="sm" className="bg-card/30 border-border/40 gap-2 h-9 text-sm">
-          <CalendarIcon className="h-4 w-4 text-green-500" />
-          <span>All time</span>
-          <ChevronDown className="h-4 w-4" />
-        </Button>
+        <div className="flex gap-2">
+          {conditions.length > 0 && (
+            <select
+              title="Filter by Condition"
+              className="bg-card/30 border-border/40 text-sm rounded-md px-3 py-1 outline-none h-9"
+              value={conditionFilter}
+              onChange={(e) => setConditionFilter(e.target.value)}
+            >
+              <option value="all">All Conditions</option>
+              {conditions.map(c => (
+                <option key={c.id} value={c.id}>{c.name}</option>
+              ))}
+            </select>
+          )}
+          <Button variant="outline" size="sm" className="bg-card/30 border-border/40 gap-2 h-9 text-sm">
+            <CalendarIcon className="h-4 w-4 text-green-500" />
+            <span>All time</span>
+            <ChevronDown className="h-4 w-4" />
+          </Button>
+        </div>
       </div>
 
       {/* Top Cards */}
@@ -216,21 +259,21 @@ export function DashboardTab({ trades, setups }: DashboardTabProps) {
           </CardContent>
         </Card>
 
-        {/* Daily PnL */}
+        {/* Setup Performance */}
         <Card className="bg-card/40 border-border/20 shadow-sm lg:col-span-1">
           <CardHeader className="pb-2 pt-5 px-5">
-            <CardTitle className="text-base font-medium">Daily PnL</CardTitle>
+            <CardTitle className="text-base font-medium">Performance by Setup</CardTitle>
           </CardHeader>
           <CardContent className="px-2 pb-5 pt-0 h-[280px]">
-            {chartsData.daily.length > 0 ? (
+            {chartsData.setupsData.length > 0 ? (
               <ChartContainer config={{ pnl: { label: "PnL", color: "#10b981" } }} className="h-full w-full">
-                <BarChart data={chartsData.daily} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border)/0.3)" />
-                  <XAxis dataKey="date" tickLine={false} axisLine={false} tickMargin={8} tick={{ fontSize: 12 }} />
-                  <YAxis tickLine={false} axisLine={false} tickMargin={8} tick={{ fontSize: 12 }} tickFormatter={(val) => `$${val}`} />
+                <BarChart data={chartsData.setupsData} layout="vertical" margin={{ top: 10, right: 10, left: 30, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="hsl(var(--border)/0.3)" />
+                  <XAxis type="number" tickLine={false} axisLine={false} tickMargin={8} tick={{ fontSize: 12 }} tickFormatter={(val) => `$${val}`} />
+                  <YAxis dataKey="name" type="category" tickLine={false} axisLine={false} tickMargin={8} tick={{ fontSize: 12 }} />
                   <ChartTooltip content={<ChartTooltipContent />} />
-                  <Bar dataKey="pnl" radius={[2, 2, 0, 0]}>
-                    {chartsData.daily.map((entry, index) => (
+                  <Bar dataKey="pnl" radius={[0, 2, 2, 0]} barSize={24}>
+                    {chartsData.setupsData.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={entry.pnl >= 0 ? "#10b981" : "#ef4444"} />
                     ))}
                   </Bar>
@@ -264,21 +307,21 @@ export function DashboardTab({ trades, setups }: DashboardTabProps) {
           </CardContent>
         </Card>
 
-        {/* PnL by Symbol */}
+        {/* Condition Performance */}
         <Card className="bg-card/40 border-border/20 shadow-sm lg:col-span-1">
           <CardHeader className="pb-2 pt-5 px-5">
-            <CardTitle className="text-base font-medium">PnL by Symbol</CardTitle>
+            <CardTitle className="text-base font-medium">Performance by Condition</CardTitle>
           </CardHeader>
           <CardContent className="px-2 pb-5 pt-0 h-[280px]">
-            {chartsData.symbols.length > 0 ? (
+            {chartsData.conditionsData.length > 0 ? (
               <ChartContainer config={{ pnl: { label: "PnL", color: "#10b981" } }} className="h-full w-full">
-                <BarChart data={chartsData.symbols} layout="vertical" margin={{ top: 10, right: 10, left: 30, bottom: 0 }}>
+                <BarChart data={chartsData.conditionsData} layout="vertical" margin={{ top: 10, right: 10, left: 30, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="hsl(var(--border)/0.3)" />
                   <XAxis type="number" tickLine={false} axisLine={false} tickMargin={8} tick={{ fontSize: 12 }} tickFormatter={(val) => `$${val}`} />
-                  <YAxis dataKey="symbol" type="category" tickLine={false} axisLine={false} tickMargin={8} tick={{ fontSize: 12 }} />
+                  <YAxis dataKey="name" type="category" tickLine={false} axisLine={false} tickMargin={8} tick={{ fontSize: 12 }} />
                   <ChartTooltip content={<ChartTooltipContent />} />
                   <Bar dataKey="pnl" radius={[0, 2, 2, 0]} barSize={24}>
-                    {chartsData.symbols.map((entry, index) => (
+                    {chartsData.conditionsData.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={entry.pnl >= 0 ? "#10b981" : "#ef4444"} />
                     ))}
                   </Bar>
@@ -315,8 +358,8 @@ export function DashboardTab({ trades, setups }: DashboardTabProps) {
             <span className="text-xl font-bold text-green-500">{formatMoney(metrics.bestTrade)}</span>
           </div>
           <div className="flex flex-col items-center justify-center flex-1 px-3">
-            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">Worst</span>
-            <span className="text-xl font-bold text-red-500">{formatMoney(metrics.worstTrade)}</span>
+            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">Risk/Reward</span>
+            <span className="text-xl font-bold text-blue-500">{metrics.riskReward.toFixed(2)}x</span>
           </div>
         </CardContent>
       </Card>
@@ -452,15 +495,15 @@ export function DashboardTab({ trades, setups }: DashboardTabProps) {
                                     <p className="text-sm text-muted-foreground">{trade.notes || "No notes available."}</p>
                                   </div>
                                   <div className="pt-4 flex items-center gap-3">
-                                    <Button size="sm" variant="outline" onClick={(e) => { e.stopPropagation(); setEditingTrade(trade); }} className="gap-2 h-8 text-xs">
+                                    <Button size="sm" variant="outline" onClick={(e) => { e.stopPropagation(); onOpenChat && onOpenChat(trade); }} className="gap-2 h-8 text-xs bg-emerald-500/10 text-emerald-500 border-emerald-500/20 hover:bg-emerald-500/20">
                                       <Edit className="h-3.5 w-3.5" />
-                                      {trade.confidenceLevel ? "Edit Entry Journal" : "Add Entry Journal"}
+                                      {trade.confidenceLevel ? "AI Journal Entry" : "Ask AI to Journal"}
                                     </Button>
 
                                     {trade.status === "closed" && (
-                                      <Button size="sm" variant="outline" onClick={(e) => { e.stopPropagation(); setClosingTrade(trade); }} className="gap-2 h-8 text-xs">
+                                      <Button size="sm" variant="outline" onClick={(e) => { e.stopPropagation(); onOpenChat && onOpenChat(trade); }} className="gap-2 h-8 text-xs bg-purple-500/10 text-purple-500 border-purple-500/20 hover:bg-purple-500/20">
                                         <CheckSquare className="h-3.5 w-3.5" />
-                                        {trade.exitReason ? "Edit Exit Journal" : "Add Exit Journal"}
+                                        {trade.exitReason ? "AI Journal Exit" : "Ask AI to Close"}
                                       </Button>
                                     )}
                                   </div>
@@ -513,20 +556,6 @@ export function DashboardTab({ trades, setups }: DashboardTabProps) {
         </CardContent>
       </Card>
 
-      {editingTrade && (
-        <NewTradesModal
-          trades={[editingTrade]}
-          setups={setups || []}
-          onComplete={() => setEditingTrade(null)}
-        />
-      )}
-
-      {closingTrade && (
-        <CloseTradeModal
-          trades={[closingTrade]}
-          onComplete={() => setClosingTrade(null)}
-        />
-      )}
     </div>
   );
 }

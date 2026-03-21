@@ -2,10 +2,8 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { NewTradesModal } from "./new-trades-modal";
-import { CloseTradeModal } from "./close-trade-modal";
 import { Loader2, RefreshCw } from "lucide-react";
-import type { SyncedNewTrade, ClosedTradeUpdate } from "@/lib/exchange";
+import type { SyncResult } from "@/lib/exchange";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -14,17 +12,9 @@ interface TradeSyncProps {
   hasExchanges: boolean;
 }
 
-interface SyncResult {
-  newTrades: SyncedNewTrade[];
-  closedTrades: ClosedTradeUpdate[];
-  errors: string[];
-}
-
 export function TradeSync({ setups, hasExchanges }: TradeSyncProps) {
   const router = useRouter();
   const [syncing, setSyncing] = useState(false);
-  const [newTrades, setNewTrades] = useState<SyncedNewTrade[]>([]);
-  const [closedTrades, setClosedTrades] = useState<ClosedTradeUpdate[]>([]);
   const [syncError, setSyncError] = useState<string | null>(null);
   const hasSynced = useRef(false);
 
@@ -42,17 +32,9 @@ export function TradeSync({ setups, hasExchanges }: TradeSyncProps) {
         throw new Error(`Sync failed: ${res.status}`);
       }
 
-      const result: SyncResult = await res.json();
+      const result = await res.json();
 
-      if (result.newTrades.length > 0) {
-        setNewTrades(result.newTrades);
-      }
-
-      if (result.closedTrades.length > 0) {
-        setClosedTrades(result.closedTrades);
-      }
-
-      if (result.errors.length > 0) {
+      if (result.errors && result.errors.length > 0) {
         setSyncError(result.errors[0]);
       }
 
@@ -89,24 +71,7 @@ export function TradeSync({ setups, hasExchanges }: TradeSyncProps) {
 
       if (type === "SYNC_RESULT") {
         const { newTrades: incoming, closedTrades: closed } = payload;
-
-        if (incoming?.length > 0) {
-          setNewTrades((prev) => {
-            const ids = new Set(prev.map((t) => t.id));
-            const unique = incoming.filter((t: any) => !ids.has(t.id));
-            return unique.length > 0 ? [...prev, ...unique] : prev;
-          });
-        }
-
-        if (closed?.length > 0) {
-          setClosedTrades((prev) => {
-            const ids = new Set(prev.map((t) => t.id));
-            const unique = closed.filter((t: any) => !ids.has(t.id));
-            return unique.length > 0 ? [...prev, ...unique] : prev;
-          });
-        }
-
-        if (incoming?.length > 0 || closed?.length > 0) {
+        if ((incoming && incoming.length > 0) || (closed && closed.length > 0)) {
           router.refresh();
         }
       } else if (type === "SYNC_ERROR") {
@@ -123,15 +88,6 @@ export function TradeSync({ setups, hasExchanges }: TradeSyncProps) {
       worker.terminate();
     };
   }, [hasExchanges, router]);
-
-  const handleNewTradesComplete = () => {
-    setNewTrades([]);
-    router.refresh();
-  };
-
-  const handleClosedDismiss = () => {
-    setClosedTrades([]);
-  };
 
   return (
     <>
@@ -159,23 +115,6 @@ export function TradeSync({ setups, hasExchanges }: TradeSyncProps) {
             <RefreshCw className="h-3 w-3" />
           </button>
         </div>
-      )}
-
-      {/* New trades journal modal */}
-      {newTrades.length > 0 && (
-        <NewTradesModal
-          trades={newTrades}
-          setups={setups}
-          onComplete={handleNewTradesComplete}
-        />
-      )}
-
-      {/* Closed trades journal modal */}
-      {closedTrades.length > 0 && (
-        <CloseTradeModal
-          trades={closedTrades}
-          onComplete={handleClosedDismiss}
-        />
       )}
     </>
   );

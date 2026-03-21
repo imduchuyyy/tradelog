@@ -20,7 +20,7 @@ export default async function DashboardPage({
   const userId = session.user.id;
 
   // Fetch all data in parallel
-  const [user, trades, setups, exchanges, chatSessions] = await Promise.all([
+  const [user, trades, setups, conditions, exchanges, chatSessions] = await Promise.all([
     prisma.user.findUnique({
       where: { id: userId },
       select: {
@@ -37,12 +37,17 @@ export default async function DashboardPage({
     }),
     prisma.trade.findMany({
       where: { userId },
-      include: { setup: true, exchange: true },
+      include: { setup: true, exchange: true, conditions: true },
       orderBy: { entryDate: "desc" },
     }),
     prisma.setup.findMany({
       where: { userId },
+      include: { conditions: true },
       orderBy: { createdAt: "desc" },
+    }),
+    prisma.condition.findMany({
+      where: { userId },
+      orderBy: { name: "asc" },
     }),
     prisma.exchange.findMany({
       where: { userId },
@@ -69,6 +74,7 @@ export default async function DashboardPage({
       user={user}
       trades={trades}
       setups={setups}
+      conditions={conditions}
       exchanges={exchanges}
       chatSessions={chatSessions}
     />

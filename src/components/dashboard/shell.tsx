@@ -43,6 +43,8 @@ interface DashboardShellProps {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   setups: any[];
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  conditions: any[];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   exchanges: any[];
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   chatSessions: any[];
@@ -59,11 +61,21 @@ export function DashboardShell({
   user,
   trades,
   setups,
+  conditions,
   exchanges,
   chatSessions,
 }: DashboardShellProps) {
   const [activeTab, setActiveTab] = useState<Tab>("dashboard");
   const [chatOpen, setChatOpen] = useState(false);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [chatContext, setChatContext] = useState<any>(null); // For passing editing trade into chat
+
+  // Provide a generic way for children to instantly trigger AI chat about a specific object
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const handleOpenChatForContext = (context: any) => {
+    setChatContext(context);
+    setChatOpen(true);
+  };
 
   const trialDaysLeft = user.trialEndsAt
     ? Math.max(
@@ -203,7 +215,7 @@ export function DashboardShell({
           {/* Tab content */}
           <main className="flex-1 overflow-auto p-4 md:p-6">
             {activeTab === "dashboard" && (
-              <DashboardTab trades={trades} setups={setups} />
+              <DashboardTab trades={trades} setups={setups} conditions={conditions} onOpenChat={handleOpenChatForContext} />
             )}
             {activeTab === "calendar" && <CalendarTab trades={trades} />}
             {activeTab === "setups" && <SetupsTab setups={setups} trades={trades} />}
@@ -214,8 +226,19 @@ export function DashboardShell({
 
           {/* AI Chat sidebar */}
           {chatOpen && (
-            <aside className="w-80 border-l border-border/40 bg-card/20 lg:w-96">
-              <AIChatPanel chatSessions={chatSessions} user={user} />
+            <aside className="w-80 border-l border-border/40 bg-card/20 lg:w-96 shrink-0 relative flex flex-col">
+              <div className="flex items-center justify-between border-b border-border/40 px-4 py-3 shrink-0 bg-background/50 backdrop-blur-sm z-10 hidden lg:flex">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="h-4 w-4 text-emerald-500" />
+                  <h3 className="text-sm font-semibold">AI Assistant</h3>
+                </div>
+                <Button variant="ghost" size="icon-xs" onClick={() => setChatOpen(false)} className="h-6 w-6">
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+              <div className="flex-1 overflow-hidden">
+                <AIChatPanel chatSessions={chatSessions} user={user} tradeContext={chatContext} />
+              </div>
             </aside>
           )}
         </div>

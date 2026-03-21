@@ -26,12 +26,13 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  accounts  Account[]
-  sessions  Session[]
-  exchanges Exchange[]
-  setups    Setup[]
-  trades    Trade[]
+  accounts     Account[]
+  sessions     Session[]
+  exchanges    Exchange[]
+  setups       Setup[]
+  trades       Trade[]
   chatSessions ChatSession[]
+  conditions   Condition[]
 }
 
 model Account {
@@ -73,13 +74,13 @@ model VerificationToken {
 // ─── Exchange connections ─────────────────────────────────────────────────────
 
 model Exchange {
-  id        String   @id @default(cuid())
-  userId    String
-  name      String   // e.g. "Binance", "Bybit", "OKX"
-  apiKey    String
-  apiSecret String
+  id         String    @id @default(cuid())
+  userId     String
+  name       String // e.g. "Binance", "Bybit", "OKX"
+  apiKey     String
+  apiSecret  String
   passphrase String? // some exchanges require this
-  isActive  Boolean  @default(true)
+  isActive   Boolean   @default(true)
   lastSyncAt DateTime? // when trades were last synced
 
   createdAt DateTime @default(now())
@@ -89,7 +90,20 @@ model Exchange {
   trades Trade[]
 }
 
-// ─── Trade setups ─────────────────────────────────────────────────────────────
+// ─── Trade setups & Conditions ──────────────────────────────────────────────────
+
+model Condition {
+  id     String @id @default(cuid())
+  userId String
+  name   String // e.g., "Swept liquid H4", "DOM USDT is up"
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  trades Trade[]
+  setups Setup[]
+}
 
 model Setup {
   id          String  @id @default(cuid())
@@ -102,14 +116,15 @@ model Setup {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  trades Trade[]
+  user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  trades     Trade[]
+  conditions Condition[]
 }
 
 // ─── Trades ───────────────────────────────────────────────────────────────────
 
 model Trade {
-  id         String @id @default(cuid())
+  id         String  @id @default(cuid())
   userId     String
   exchangeId String?
   setupId    String?
@@ -118,34 +133,34 @@ model Trade {
   externalTradeId String? @unique
 
   // Core trade fields
-  symbol      String   // e.g. "BTCUSDT"
-  side        String   // "long" | "short"
-  status      String   @default("open") // "open" | "closed" | "cancelled"
-  entryPrice  Float
-  exitPrice   Float?
-  quantity    Float
-  leverage    Float?   @default(1)
-  stopLoss    Float?
-  takeProfit  Float?
-  pnl         Float?   // realized PnL
-  pnlPercent  Float?   // PnL as percentage
-  fees        Float?   @default(0)
+  symbol     String // e.g. "BTCUSDT"
+  side       String // "long" | "short"
+  status     String @default("open") // "open" | "closed" | "cancelled"
+  entryPrice Float
+  exitPrice  Float?
+  quantity   Float
+  leverage   Float? @default(1)
+  stopLoss   Float?
+  takeProfit Float?
+  pnl        Float? // realized PnL
+  pnlPercent Float? // PnL as percentage
+  fees       Float? @default(0)
 
   // Tracing / journaling fields
   setupReason     String? // reason for entering trade
   psychology      String? // emotional state / mindset
   marketCondition String? // trending, ranging, volatile, etc.
-  confidenceLevel Int?    // 1-10 scale
+  confidenceLevel Int? // 1-10 scale
   notes           String? // general notes
 
   // Post-trade / closing journaling fields
-  exitReason      String?
-  exitPsychology  String?
-  mistakes        String?
-  lessons         String?
+  exitReason     String?
+  exitPsychology String?
+  mistakes       String?
+  lessons        String?
 
   // Sync metadata
-  needsJournal Boolean @default(false) // true when synced from exchange, awaiting user journal entry
+  needsJournal Boolean   @default(false) // true when synced from exchange, awaiting user journal entry
   syncedAt     DateTime? // when last synced from exchange
 
   entryDate DateTime  @default(now())
@@ -154,10 +169,11 @@ model Trade {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  exchange Exchange? @relation(fields: [exchangeId], references: [id], onDelete: SetNull)
-  setup    Setup?    @relation(fields: [setupId], references: [id], onDelete: SetNull)
-  files    TradeFile[]
+  user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  exchange   Exchange?   @relation(fields: [exchangeId], references: [id], onDelete: SetNull)
+  setup      Setup?      @relation(fields: [setupId], references: [id], onDelete: SetNull)
+  conditions Condition[]
+  files      TradeFile[]
 }
 
 model TradeFile {
@@ -201,13 +217,13 @@ model ChatMessage {
 // ─── Partners ─────────────────────────────────────────────────────────────────
 
 model Partner {
-  id                    String @id @default(cuid())
-  code                  String @unique
-  email                 String
-  name                  String?
-  discountPercent       Float  @default(0)
-  shareCommissionPercent Float @default(0)
-  isActive              Boolean @default(true)
+  id                     String  @id @default(cuid())
+  code                   String  @unique
+  email                  String
+  name                   String?
+  discountPercent        Float   @default(0)
+  shareCommissionPercent Float   @default(0)
+  isActive               Boolean @default(true)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
