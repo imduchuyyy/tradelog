@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { useTranslations } from "next-intl";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Check, Loader2, Target, MoveRight, ArrowLeft } from "lucide-react";
@@ -23,6 +24,29 @@ const PSYCHOLOGIES = ["Focused", "Anxious", "FOMO", "Confident", "Revenge", "Oth
 const REASONS = ["Support Bounce", "Resistance Breakout", "Trend Continuation", "News Event", "Other"];
 
 export function NewTradesModal({ trades, setups, onComplete }: NewTradesModalProps) {
+  const t = useTranslations("sync");
+  const tCommon = useTranslations("common");
+
+  const getOpt = (val: string) => {
+    const map: Record<string, string> = {
+      "Support Bounce": t("options.supportBounce"),
+      "Resistance Breakout": t("options.resistanceBreakout"),
+      "Trend Continuation": t("options.trendContinuation"),
+      "News Event": t("options.newsEvent"),
+      "Focused": t("options.focused"),
+      "Anxious": t("options.anxious"),
+      "FOMO": t("options.fomo"),
+      "Confident": t("options.confident"),
+      "Revenge": t("options.revenge"),
+      "Trending": t("trending"),
+      "Ranging": t("ranging"),
+      "Volatile": t("volatile"),
+      "Breakout": t("breakout"),
+      "Other": tCommon("other")
+    };
+    return map[val] || val;
+  };
+
   const [currentIndex, setCurrentIndex] = useState(0);
   const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(trades.length > 0);
@@ -142,11 +166,11 @@ export function NewTradesModal({ trades, setups, onComplete }: NewTradesModalPro
                 </button>
               )}
               <Target className="w-5 h-5"/>
-              <DialogTitle className="text-lg font-bold">Entry Survey</DialogTitle>
+              <DialogTitle className="text-lg font-bold">{t("entrySurvey")}</DialogTitle>
             </div>
             <div className="flex flex-col items-end gap-1">
               <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider">
-                Trade {currentIndex + 1} of {trades.length}
+                {t("tradeOf", { current: currentIndex + 1, total: trades.length }).split("—")[0]}
               </span>
               <div className="flex gap-1">
                 {Array.from({ length: TOTAL_STEPS }).map((_, i) => (
@@ -156,7 +180,7 @@ export function NewTradesModal({ trades, setups, onComplete }: NewTradesModalPro
             </div>
           </div>
           <DialogDescription className="text-sm">
-            Log your intent for <strong className="text-foreground">{currentTrade.symbol}</strong> ({currentTrade.side.toUpperCase()}).
+            {t("logEntryFor")} <strong className="text-foreground">{currentTrade.symbol}</strong> ({currentTrade.side.toUpperCase()}).
           </DialogDescription>
         </div>
 
@@ -172,17 +196,17 @@ export function NewTradesModal({ trades, setups, onComplete }: NewTradesModalPro
                 }}
                 className="flex h-10 w-full rounded-md border border-border/50 bg-muted/20 px-3 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
               >
-                <option value="">No Strategy</option>
+                <option value="">{t("noStrategy")}</option>
                 {allSetups.map((s: any) => (
                   <option key={s.id} value={s.id}>{s.name}</option>
                 ))}
-                <option value="__custom__">+ Create custom...</option>
+                <option value="__custom__">{t("createNewSetup")}</option>
               </select>
               {formData.setupId === "__custom__" && (
                 <Input
                   value={formData.customSetup}
                   onChange={(e) => setFormData(f => ({ ...f, customSetup: e.target.value }))}
-                  placeholder="Name your new setup"
+                  placeholder={t("nameNewSetup")}
                   autoFocus
                   className="h-10 bg-muted/20 border-border/50"
                 />
@@ -213,7 +237,7 @@ export function NewTradesModal({ trades, setups, onComplete }: NewTradesModalPro
 
           {step === 3 && (
             <div className="space-y-3 animate-in fade-in slide-in-from-right-4 duration-300">
-              <Label className="uppercase text-[10px] tracking-wider font-semibold text-muted-foreground">Why enter now?</Label>
+              <Label className="uppercase text-[10px] tracking-wider font-semibold text-muted-foreground">{t("whyEnter")}</Label>
               <div className="flex flex-wrap gap-2">
                 {REASONS.map(reason => (
                   <button
@@ -226,13 +250,13 @@ export function NewTradesModal({ trades, setups, onComplete }: NewTradesModalPro
                         : "bg-muted/20 border-border/40 text-muted-foreground hover:bg-muted/50"
                     )}
                   >
-                    {reason}
+                    {getOpt(reason)}
                   </button>
                 ))}
               </div>
               {formData.setupReason === "Other" && (
                 <Input
-                  placeholder="Type reason here"
+                  placeholder={t("typeReasonHere")}
                   value={formData.customReason}
                   className="h-9 mt-2 text-sm bg-muted/20 border-border/50"
                   onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData(f => ({ ...f, customReason: e.target.value }))}
@@ -243,7 +267,7 @@ export function NewTradesModal({ trades, setups, onComplete }: NewTradesModalPro
 
           {step === 4 && (
             <div className="space-y-3 animate-in fade-in slide-in-from-right-4 duration-300">
-              <Label className="uppercase text-[10px] tracking-wider font-semibold text-muted-foreground">Market Condition</Label>
+              <Label className="uppercase text-[10px] tracking-wider font-semibold text-muted-foreground">{t("marketCondition")}</Label>
               <div className="flex flex-wrap gap-2">
                 {MARKET_CONDITIONS.map(cond => (
                   <button
@@ -256,13 +280,13 @@ export function NewTradesModal({ trades, setups, onComplete }: NewTradesModalPro
                         : "bg-muted/20 border-border/40 text-muted-foreground hover:bg-muted/50"
                     )}
                   >
-                    {cond}
+                    {getOpt(cond)}
                   </button>
                 ))}
               </div>
               {formData.marketCondition === "Other" && (
                 <Input
-                  placeholder="Type market condition here"
+                  placeholder={t("typeMarketConditionHere")}
                   value={formData.customMarketCondition}
                   className="h-9 mt-2 text-sm bg-muted/20 border-border/50"
                   onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData(f => ({ ...f, customMarketCondition: e.target.value }))}
@@ -273,7 +297,7 @@ export function NewTradesModal({ trades, setups, onComplete }: NewTradesModalPro
 
           {step === 5 && (
             <div className="space-y-3 animate-in fade-in slide-in-from-right-4 duration-300">
-              <Label className="uppercase text-[10px] tracking-wider font-semibold text-muted-foreground">Psychology</Label>
+              <Label className="uppercase text-[10px] tracking-wider font-semibold text-muted-foreground">{t("psychologyMindset")}</Label>
               <div className="flex flex-wrap gap-2">
                 {PSYCHOLOGIES.map(psy => (
                   <button
@@ -286,13 +310,13 @@ export function NewTradesModal({ trades, setups, onComplete }: NewTradesModalPro
                         : "bg-muted/20 border-border/40 text-muted-foreground hover:bg-muted/50"
                     )}
                   >
-                    {psy}
+                    {getOpt(psy)}
                   </button>
                 ))}
               </div>
               {formData.psychology === "Other" && (
                 <Input
-                  placeholder="Type psychology here"
+                  placeholder={t("typeEmotionHere")}
                   value={formData.customPsychology}
                   className="h-9 mt-2 text-sm bg-muted/20 border-border/50"
                   onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData(f => ({ ...f, customPsychology: e.target.value }))}
@@ -303,11 +327,11 @@ export function NewTradesModal({ trades, setups, onComplete }: NewTradesModalPro
 
           {step === 6 && (
             <div className="space-y-3 animate-in fade-in slide-in-from-right-4 duration-300">
-              <Label className="uppercase text-[10px] tracking-wider font-semibold text-muted-foreground">Additional Notes</Label>
+              <Label className="uppercase text-[10px] tracking-wider font-semibold text-muted-foreground">{t("additionalNotes")}</Label>
               <Textarea
                 value={formData.notes}
                 onChange={(e) => setFormData(f => ({ ...f, notes: e.target.value }))}
-                placeholder="Any other observations?"
+                placeholder={t("notesPlaceholder")}
                 rows={2}
                 className="resize-none bg-muted/20 border-border/50 focus:bg-background transition-colors"
               />

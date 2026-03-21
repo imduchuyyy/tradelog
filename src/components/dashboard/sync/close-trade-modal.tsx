@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Flag, Loader2, Check, ArrowLeft, MoveRight } from "lucide-react";
 import { closeTradeJournal } from "@/app/actions";
 import { cn } from "@/lib/utils";
+import { useTranslations } from "next-intl";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -30,6 +31,50 @@ const WIN_LESSONS = ["Stick To Plan", "Let Winners Run", "Trust The Setup", "Tri
 const LOSE_LESSONS = ["Respect Stop Loss", "Need More Patience", "Wait For Confirmation", "Reduce Position Size", "Other"];
 
 export function CloseTradeModal({ trades, onComplete }: CloseTradeModalProps) {
+  const t = useTranslations("sync");
+  const tCommon = useTranslations("common");
+  const tDashboard = useTranslations("dashboard.trades");
+
+  const getOpt = (val: string) => {
+    const map: Record<string, string> = {
+      "Take Profit Hit": t("options.takeProfitHit"),
+      "Trailing Stop Hit": t("options.trailingStopHit"),
+      "Manual Close (Target Reached)": t("options.manualCloseTarget"),
+      "Manual Close (Early)": t("options.manualCloseEarly"),
+      "Time Based": t("options.timeBased"),
+      "Stop Loss Hit": t("options.stopLossHit"),
+      "Manual Panic Close": t("options.manualPanicClose"),
+      "Manual Close (Invalidation)": t("options.manualCloseInvalidation"),
+      "Satisfied": t("options.satisfied"),
+      "Relieved": t("options.relieved"),
+      "Greedy": t("options.greedy"),
+      "Confident": t("options.confident"),
+      "Frustrated": t("options.frustrated"),
+      "Anxious": t("options.anxious"),
+      "Regretful": t("options.regretful"),
+      "Accepting": t("options.accepting"),
+      "Revenge": t("options.revenge"),
+      "None": t("options.none"),
+      "Closed Too Early": t("options.closedTooEarly"),
+      "Took Too Much Risk": t("options.tookTooMuchRisk"),
+      "Ignored Trading Plan": t("options.ignoredTradingPlan"),
+      "Moved Stop Loss": t("options.movedStopLoss"),
+      "Revenge Trading": t("options.revengeTrading"),
+      "Overleveraged": t("options.overleveraged"),
+      "Hesitated to Close": t("options.hesitatedToClose"),
+      "Stick To Plan": t("options.stickToPlan"),
+      "Let Winners Run": t("options.letWinnersRun"),
+      "Trust The Setup": t("options.trustTheSetup"),
+      "Trim Profits Early": t("options.trimProfitsEarly"),
+      "Respect Stop Loss": t("options.respectStopLoss"),
+      "Need More Patience": t("options.needMorePatience"),
+      "Wait For Confirmation": t("options.waitForConfirmation"),
+      "Reduce Position Size": t("options.reducePositionSize"),
+      "Other": tCommon("other")
+    };
+    return map[val] || val;
+  };
+
   const [currentIndex, setCurrentIndex] = useState(0);
   const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(trades.length > 0);
@@ -140,11 +185,11 @@ export function CloseTradeModal({ trades, onComplete }: CloseTradeModalProps) {
                 </button>
               )}
               <Flag className="w-5 h-5"/>
-              <DialogTitle className="text-lg font-bold">Exit Survey</DialogTitle>
+              <DialogTitle className="text-lg font-bold">{t("exitSurvey")}</DialogTitle>
             </div>
             <div className="flex flex-col items-end gap-1">
               <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider">
-                Trade {currentIndex + 1} of {trades.length}
+                {t("tradeOf", { current: currentIndex + 1, total: trades.length }).split("—")[0]}
               </span>
               <div className="flex gap-1">
                 {Array.from({ length: TOTAL_STEPS }).map((_, i) => (
@@ -154,14 +199,14 @@ export function CloseTradeModal({ trades, onComplete }: CloseTradeModalProps) {
             </div>
           </div>
           <DialogDescription className="text-sm">
-            Reflect on closing <strong className="text-foreground">{currentTrade.symbol}</strong>.
+            {t("reflectOnClosing")} <strong className="text-foreground">{currentTrade.symbol}</strong>.
           </DialogDescription>
         </div>
 
         <div className="p-6">
           {step === 1 && (
             <div className="space-y-3 animate-in fade-in slide-in-from-right-4 duration-300">
-              <Label className="uppercase text-[10px] tracking-wider font-semibold text-muted-foreground">Exit Reason</Label>
+              <Label className="uppercase text-[10px] tracking-wider font-semibold text-muted-foreground">{tDashboard("exitReason")}</Label>
               <div className="flex flex-wrap gap-2">
                 {activeExitReasons.map(reason => (
                   <button
@@ -174,13 +219,13 @@ export function CloseTradeModal({ trades, onComplete }: CloseTradeModalProps) {
                         : "bg-muted/20 border-border/40 text-muted-foreground hover:bg-muted/50"
                     )}
                   >
-                    {reason}
+                    {getOpt(reason)}
                   </button>
                 ))}
               </div>
               {formData.exitReason === "Other" && (
                 <Input
-                  placeholder="Type reason here"
+                  placeholder={t("typeReasonHere")}
                   value={formData.customExitReason}
                   className="h-9 mt-2 text-sm bg-muted/20 border-border/50"
                   onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData(f => ({ ...f, customExitReason: e.target.value }))}
@@ -191,7 +236,7 @@ export function CloseTradeModal({ trades, onComplete }: CloseTradeModalProps) {
 
           {step === 2 && (
             <div className="space-y-3 animate-in fade-in slide-in-from-right-4 duration-300">
-              <Label className="uppercase text-[10px] tracking-wider font-semibold text-muted-foreground">Emotion at Exit</Label>
+              <Label className="uppercase text-[10px] tracking-wider font-semibold text-muted-foreground">{tDashboard("exitPsychology")}</Label>
               <div className="flex flex-wrap gap-2">
                 {activePsychologies.map(psy => (
                   <button
@@ -204,13 +249,13 @@ export function CloseTradeModal({ trades, onComplete }: CloseTradeModalProps) {
                         : "bg-muted/20 border-border/40 text-muted-foreground hover:bg-muted/50"
                     )}
                   >
-                    {psy}
+                    {getOpt(psy)}
                   </button>
                 ))}
               </div>
               {formData.exitPsychology === "Other" && (
                 <Input
-                  placeholder="Type emotion here"
+                  placeholder={t("typeEmotionHere")}
                   value={formData.customExitPsychology}
                   className="h-9 mt-2 text-sm bg-muted/20 border-border/50"
                   onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData(f => ({ ...f, customExitPsychology: e.target.value }))}
@@ -221,7 +266,7 @@ export function CloseTradeModal({ trades, onComplete }: CloseTradeModalProps) {
 
           {step === 3 && (
             <div className="space-y-3 animate-in fade-in slide-in-from-right-4 duration-300">
-              <Label className="uppercase text-[10px] tracking-wider font-semibold text-muted-foreground">Any Mistakes?</Label>
+              <Label className="uppercase text-[10px] tracking-wider font-semibold text-muted-foreground">{tDashboard("mistakes")}</Label>
               <div className="flex flex-wrap gap-2">
                 {activeMistakes.map(mistake => (
                   <button
@@ -234,13 +279,13 @@ export function CloseTradeModal({ trades, onComplete }: CloseTradeModalProps) {
                         : "bg-muted/20 border-border/40 text-muted-foreground hover:bg-muted/50"
                     )}
                   >
-                    {mistake}
+                    {getOpt(mistake)}
                   </button>
                 ))}
               </div>
               {formData.mistakes === "Other" && (
                 <Input
-                  placeholder="Type mistakes here"
+                  placeholder={t("typeMistakesHere")}
                   value={formData.customMistakes}
                   className="h-9 mt-2 text-sm bg-muted/20 border-border/50"
                   onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData(f => ({ ...f, customMistakes: e.target.value }))}
@@ -251,7 +296,7 @@ export function CloseTradeModal({ trades, onComplete }: CloseTradeModalProps) {
 
           {step === 4 && (
             <div className="space-y-3 animate-in fade-in slide-in-from-right-4 duration-300">
-              <Label className="uppercase text-[10px] tracking-wider font-semibold text-muted-foreground">Lessons Learned</Label>
+              <Label className="uppercase text-[10px] tracking-wider font-semibold text-muted-foreground">{tDashboard("lessons")}</Label>
               <div className="flex flex-wrap gap-2">
                 {activeLessons.map(lesson => (
                   <button
@@ -264,13 +309,13 @@ export function CloseTradeModal({ trades, onComplete }: CloseTradeModalProps) {
                         : "bg-muted/20 border-border/40 text-muted-foreground hover:bg-muted/50"
                     )}
                   >
-                    {lesson}
+                    {getOpt(lesson)}
                   </button>
                 ))}
               </div>
               {formData.lessons === "Other" && (
                 <Input
-                  placeholder="Type lessons here"
+                  placeholder={t("typeLessonsHere")}
                   value={formData.customLessons}
                   className="h-9 mt-2 text-sm bg-muted/20 border-border/50"
                   onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData(f => ({ ...f, customLessons: e.target.value }))}
@@ -282,11 +327,11 @@ export function CloseTradeModal({ trades, onComplete }: CloseTradeModalProps) {
 
         <div className="p-4 bg-muted/10 border-t border-border/20 flex gap-3">
           <Button variant="ghost" onClick={handleSkip} disabled={loading} className="w-24 text-muted-foreground hover:text-foreground">
-            Skip Trade
+            {t("skipTrade")}
           </Button>
           <Button onClick={handleNext} disabled={loading} className={cn("flex-1 gap-2 text-white shadow-lg", isWin ? "bg-green-600 hover:bg-green-700 shadow-green-500/20" : "bg-red-600 hover:bg-red-700 shadow-red-500/20")}>
             {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : step === TOTAL_STEPS ? (isLast ? <Check className="w-4 h-4"/> : <MoveRight className="w-4 h-4"/>) : <MoveRight className="w-4 h-4"/>}
-            {step === TOTAL_STEPS ? (isLast ? "Done" : "Next Trade") : "Next Question"}
+            {step === TOTAL_STEPS ? (isLast ? t("done") : t("nextTrade")) : t("nextQuestion")}
           </Button>
         </div>
       </DialogContent>
