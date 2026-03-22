@@ -3,20 +3,108 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2, RefreshCw } from "lucide-react";
-import type { SyncResult } from "@/lib/exchange";
+import type { TradeNotification } from "@/components/dashboard/shell";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 interface TradeSyncProps {
   setups: any[];
   hasExchanges: boolean;
+  onTradeNotification?: (notification: TradeNotification) => void;
 }
 
-export function TradeSync({ setups, hasExchanges }: TradeSyncProps) {
+/**
+ * Request browser notification permission on mount, and fire notifications
+ * when new/closed trades are detected.
+ */
+function sendBrowserNotification(title: string, body: string) {
+  if (typeof window === "undefined") return;
+  if (!("Notification" in window)) return;
+
+  if (Notification.permission === "granted") {
+    new Notification(title, {
+      body,
+      icon: "/icon-192.png",
+      badge: "/icon-192.png",
+      tag: "tradelog-sync",
+    });
+  }
+}
+
+export function TradeSync({
+  setups,
+  hasExchanges,
+  onTradeNotification,
+}: TradeSyncProps) {
   const router = useRouter();
   const [syncing, setSyncing] = useState(false);
   const [syncError, setSyncError] = useState<string | null>(null);
   const hasSynced = useRef(false);
+
+  // Request browser notification permission on mount
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (!("Notification" in window)) return;
+    if (Notification.permission === "default") {
+      Notification.requestPermission();
+    }
+  }, []);
+
+  // Handle sync results — notify AI chat + browser
+  const handleSyncResult = useCallback(
+    (result: any) => {
+      const newTrades = result.newTrades || [];
+      const closedTrades = result.closedTrades || [];
+
+      // Notify for each new trade
+      for (const trade of newTrades) {
+        sendBrowserNotification(
+          "New Trade Opened",
+          `${trade.symbol} ${trade.side?.toUpperCase()} at ${trade.entryPrice || "market"}`
+        );
+
+        onTradeNotification?.({
+          type: "new_trade",
+          trade: {
+            id: trade.id,
+            symbol: trade.symbol,
+            side: trade.side,
+            entryPrice: trade.entryPrice ? Number(trade.entryPrice) : undefined,
+            status: trade.status,
+          },
+        });
+      }
+
+      // Notify for each closed trade
+      for (const trade of closedTrades) {
+        const pnl = trade.pnl !== null && trade.pnl !== undefined ? Number(trade.pnl) : undefined;
+        const isWin = pnl !== undefined && pnl > 0;
+
+        sendBrowserNotification(
+          `Trade Closed — ${isWin ? "WIN" : "LOSS"}`,
+          `${trade.symbol} ${trade.side?.toUpperCase()} | PnL: $${pnl?.toFixed(2) || "N/A"}`
+        );
+
+        onTradeNotification?.({
+          type: "closed_trade",
+          trade: {
+            id: trade.id,
+            symbol: trade.symbol,
+            side: trade.side,
+            exitPrice: trade.exitPrice ? Number(trade.exitPrice) : undefined,
+            pnl,
+            status: trade.status,
+          },
+        });
+      }
+
+      // Refresh page data if anything changed
+      if (newTrades.length > 0 || closedTrades.length > 0) {
+        router.refresh();
+      }
+    },
+    [router, onTradeNotification]
+  );
 
   // ── Initial one-shot sync on page load ─────────────────────────────────────
   const runSync = useCallback(async () => {
@@ -38,9 +126,7 @@ export function TradeSync({ setups, hasExchanges }: TradeSyncProps) {
         setSyncError(result.errors[0]);
       }
 
-      if (result.newTrades.length > 0 || result.closedTrades.length > 0) {
-        router.refresh();
-      }
+      handleSyncResult(result);
     } catch (err) {
       console.error("[TradeSync] Sync error:", err);
       setSyncError(
@@ -49,7 +135,7 @@ export function TradeSync({ setups, hasExchanges }: TradeSyncProps) {
     } finally {
       setSyncing(false);
     }
-  }, [hasExchanges, syncing, router]);
+  }, [hasExchanges, syncing, handleSyncResult]);
 
   // Run once on mount
   useEffect(() => {
@@ -59,8 +145,6 @@ export function TradeSync({ setups, hasExchanges }: TradeSyncProps) {
   }, [runSync]);
 
   // ── Background worker: polls /api/trades/sync every 60s ────────────────────
-  // The worker only posts a message when new or closed trades are detected,
-  // so the UI stays quiet between changes.
   useEffect(() => {
     if (!hasExchanges || typeof window === "undefined") return;
 
@@ -70,10 +154,7 @@ export function TradeSync({ setups, hasExchanges }: TradeSyncProps) {
       const { type, payload } = e.data;
 
       if (type === "SYNC_RESULT") {
-        const { newTrades: incoming, closedTrades: closed } = payload;
-        if ((incoming && incoming.length > 0) || (closed && closed.length > 0)) {
-          router.refresh();
-        }
+        handleSyncResult(payload);
       } else if (type === "SYNC_ERROR") {
         setSyncError(payload);
       }
@@ -87,7 +168,7 @@ export function TradeSync({ setups, hasExchanges }: TradeSyncProps) {
       worker.postMessage({ type: "STOP" });
       worker.terminate();
     };
-  }, [hasExchanges, router]);
+  }, [hasExchanges, handleSyncResult]);
 
   return (
     <>

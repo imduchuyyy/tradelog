@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback, useRef } from "react";
 import { signOut } from "next-auth/react";
 import {
   BarChart3,
@@ -26,7 +26,7 @@ import { cn } from "@/lib/utils";
 
 type Tab = "dashboard" | "calendar" | "setups" | "settings";
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+/* eslint-disable @typescript-eslint/no-explicit-any */
 interface DashboardShellProps {
   user: {
     id: string;
@@ -38,16 +38,24 @@ interface DashboardShellProps {
     plan: string;
     trialEndsAt: Date | null;
   };
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   trades: any[];
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   setups: any[];
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   conditions: any[];
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   exchanges: any[];
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   chatSessions: any[];
+}
+
+export interface TradeNotification {
+  type: "new_trade" | "closed_trade";
+  trade: {
+    id: string;
+    symbol: string;
+    side: string;
+    entryPrice?: number;
+    exitPrice?: number;
+    pnl?: number;
+    status: string;
+  };
 }
 
 const tabs: { id: Tab; label: string; icon: React.ElementType }[] = [
@@ -66,22 +74,30 @@ export function DashboardShell({
   chatSessions,
 }: DashboardShellProps) {
   const [activeTab, setActiveTab] = useState<Tab>("dashboard");
-  const [chatOpen, setChatOpen] = useState(false);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [chatContext, setChatContext] = useState<any>(null); // For passing editing trade into chat
+  const [mobileChatOpen, setMobileChatOpen] = useState(false);
+  const [chatContext, setChatContext] = useState<any>(null);
 
-  // Provide a generic way for children to instantly trigger AI chat about a specific object
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  // Trade notifications queue — TradeSync pushes here, AIChatPanel consumes
+  const [tradeNotifications, setTradeNotifications] = useState<TradeNotification[]>([]);
+
   const handleOpenChatForContext = (context: any) => {
     setChatContext(context);
-    setChatOpen(true);
+    // On mobile, open the chat overlay
+    setMobileChatOpen(true);
   };
+
+  const handleTradeNotification = useCallback((notification: TradeNotification) => {
+    setTradeNotifications((prev) => [...prev, notification]);
+  }, []);
+
+  const handleClearNotification = useCallback((tradeId: string) => {
+    setTradeNotifications((prev) => prev.filter((n) => n.trade.id !== tradeId));
+  }, []);
 
   const trialDaysLeft = user.trialEndsAt
     ? Math.max(
         0,
         Math.ceil(
-          // eslint-disable-next-line react-hooks/purity
           (new Date(user.trialEndsAt).getTime() - Date.now()) /
             (1000 * 60 * 60 * 24)
         )
@@ -194,19 +210,18 @@ export function DashboardShell({
                 Trial: {trialDaysLeft}d left
               </Badge>
             )}
-            <Button
-              variant={chatOpen ? "default" : "outline"}
-              size="sm"
-              onClick={() => setChatOpen(!chatOpen)}
-              className="gap-2"
-            >
-              {chatOpen ? (
-                <X className="h-3.5 w-3.5" />
-              ) : (
-                <Sparkles className="h-3.5 w-3.5" />
-              )}
-              <span className="hidden sm:inline">AI Chat</span>
-            </Button>
+            {/* Notification badge for pending trade notifications */}
+            {tradeNotifications.length > 0 && (
+              <div className="hidden md:flex items-center gap-1.5 rounded-full bg-amber-500/10 border border-amber-500/20 px-3 py-1">
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500" />
+                </span>
+                <span className="text-xs text-amber-600 font-medium">
+                  {tradeNotifications.length} trade{tradeNotifications.length > 1 ? "s" : ""} need journaling
+                </span>
+              </div>
+            )}
           </div>
         </header>
 
@@ -224,35 +239,68 @@ export function DashboardShell({
             )}
           </main>
 
-          {/* AI Chat sidebar */}
-          {chatOpen && (
-            <aside className="w-80 border-l border-border/40 bg-card/20 lg:w-96 shrink-0 relative flex flex-col">
-              <div className="flex items-center justify-between border-b border-border/40 px-4 py-3 shrink-0 bg-background/50 backdrop-blur-sm z-10 hidden lg:flex">
-                <div className="flex items-center gap-2">
-                  <Sparkles className="h-4 w-4 text-emerald-500" />
-                  <h3 className="text-sm font-semibold">AI Assistant</h3>
-                </div>
-                <Button variant="ghost" size="icon-xs" onClick={() => setChatOpen(false)} className="h-6 w-6">
-                  <X className="h-4 w-4" />
-                </Button>
+          {/* AI Chat sidebar — ALWAYS VISIBLE on desktop */}
+          <aside className="hidden md:flex w-80 border-l border-border/40 bg-card/20 lg:w-96 shrink-0 relative flex-col">
+            <div className="flex items-center justify-between border-b border-border/40 px-4 py-3 shrink-0 bg-background/50 backdrop-blur-sm z-10">
+              <div className="flex items-center gap-2">
+                <Sparkles className="h-4 w-4 text-emerald-500" />
+                <h3 className="text-sm font-semibold">AI Assistant</h3>
               </div>
-              <div className="flex-1 overflow-hidden">
-                <AIChatPanel chatSessions={chatSessions} user={user} tradeContext={chatContext} />
-              </div>
-            </aside>
-          )}
+              {tradeNotifications.length > 0 && (
+                <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-amber-500 text-[10px] font-bold text-white px-1.5">
+                  {tradeNotifications.length}
+                </span>
+              )}
+            </div>
+            <div className="flex-1 overflow-hidden">
+              <AIChatPanel
+                chatSessions={chatSessions}
+                user={user}
+                tradeContext={chatContext}
+                tradeNotifications={tradeNotifications}
+                onClearNotification={handleClearNotification}
+              />
+            </div>
+          </aside>
         </div>
       </div>
 
+      {/* Mobile chat overlay */}
+      {mobileChatOpen && (
+        <div className="fixed inset-0 z-50 flex flex-col bg-background md:hidden">
+          <div className="flex items-center justify-between border-b border-border/40 px-4 py-3 bg-background/50 backdrop-blur-sm">
+            <div className="flex items-center gap-2">
+              <Sparkles className="h-4 w-4 text-emerald-500" />
+              <h3 className="text-sm font-semibold">AI Assistant</h3>
+            </div>
+            <Button variant="ghost" size="icon-xs" onClick={() => setMobileChatOpen(false)} className="h-7 w-7">
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+          <div className="flex-1 overflow-hidden">
+            <AIChatPanel
+              chatSessions={chatSessions}
+              user={user}
+              tradeContext={chatContext}
+              tradeNotifications={tradeNotifications}
+              onClearNotification={handleClearNotification}
+            />
+          </div>
+        </div>
+      )}
+
       {/* Mobile bottom nav */}
-      <div className="fixed bottom-0 left-0 right-0 flex border-t border-border/40 bg-background md:hidden z-50">
+      <div className="fixed bottom-0 left-0 right-0 flex border-t border-border/40 bg-background md:hidden z-40">
         {tabs.map((tab) => (
           <button
             key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
+            onClick={() => {
+              setActiveTab(tab.id);
+              setMobileChatOpen(false);
+            }}
             className={cn(
               "flex flex-1 flex-col items-center gap-1 py-2 text-[10px]",
-              activeTab === tab.id
+              activeTab === tab.id && !mobileChatOpen
                 ? "text-primary"
                 : "text-muted-foreground"
             )}
@@ -262,14 +310,19 @@ export function DashboardShell({
           </button>
         ))}
         <button
-          onClick={() => setChatOpen(!chatOpen)}
+          onClick={() => setMobileChatOpen(!mobileChatOpen)}
           className={cn(
-            "flex flex-1 flex-col items-center gap-1 py-2 text-[10px]",
-            chatOpen ? "text-primary" : "text-muted-foreground"
+            "flex flex-1 flex-col items-center gap-1 py-2 text-[10px] relative",
+            mobileChatOpen ? "text-primary" : "text-muted-foreground"
           )}
         >
           <MessageSquare className="h-4 w-4" />
           AI
+          {tradeNotifications.length > 0 && (
+            <span className="absolute top-1 right-1/4 flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-amber-500 text-[8px] font-bold text-white px-0.5">
+              {tradeNotifications.length}
+            </span>
+          )}
         </button>
       </div>
 
@@ -277,6 +330,7 @@ export function DashboardShell({
       <TradeSync
         setups={setups}
         hasExchanges={exchanges.length > 0}
+        onTradeNotification={handleTradeNotification}
       />
     </div>
   );
