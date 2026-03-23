@@ -5,8 +5,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
   DialogContent,
@@ -39,10 +37,12 @@ export function SetupsTab({ setups, trades }: SetupsTabProps) {
   const [createOpen, setCreateOpen] = useState(false);
   const [editSetup, setEditSetup] = useState<any>(null);
 
-  // Calculate stats per setup
+  // Calculate stats per setup (M:N — trade has setups array)
   const setupStats = setups.map((setup: any) => {
     const setupTrades = trades.filter(
-      (t: any) => t.setupId === setup.id && t.status === "closed"
+      (t: any) =>
+        t.status === "closed" &&
+        t.setups?.some((s: any) => s.id === setup.id)
     );
     const wins = setupTrades.filter((t: any) => t.pnl && t.pnl > 0);
     const winRate =
@@ -54,7 +54,12 @@ export function SetupsTab({ setups, trades }: SetupsTabProps) {
       0
     );
 
-    return { ...setup, tradeCount: setupTrades.length, winRate, totalPnl };
+    return {
+      ...setup,
+      tradeCount: setupTrades.length,
+      winRate,
+      totalPnl,
+    };
   });
 
   return (
@@ -63,10 +68,13 @@ export function SetupsTab({ setups, trades }: SetupsTabProps) {
         <div>
           <h2 className="text-lg font-semibold">Trade Setups</h2>
           <p className="text-sm text-muted-foreground">
-            Manage your favorite trading setups and track their performance
+            Manage your setups to tag trades with strategy names
           </p>
         </div>
-        <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+        <Dialog
+          open={createOpen}
+          onOpenChange={setCreateOpen}
+        >
           <DialogTrigger
             render={
               <Button
@@ -99,24 +107,6 @@ export function SetupsTab({ setups, trades }: SetupsTabProps) {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="description">Description</Label>
-                <Textarea
-                  id="description"
-                  name="description"
-                  placeholder="Brief description of this setup"
-                  rows={2}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="rules">Rules / Criteria</Label>
-                <Textarea
-                  id="rules"
-                  name="rules"
-                  placeholder="Entry criteria, exit rules, etc."
-                  rows={3}
-                />
-              </div>
-              <div className="space-y-2">
                 <Label>Color</Label>
                 <div className="flex gap-2">
                   {COLORS.map((color) => (
@@ -136,6 +126,7 @@ export function SetupsTab({ setups, trades }: SetupsTabProps) {
                   ))}
                 </div>
               </div>
+
               <Button
                 type="submit"
                 className="w-full bg-gradient-to-r from-blue-500 to-indigo-600 text-white border-0"
@@ -150,7 +141,9 @@ export function SetupsTab({ setups, trades }: SetupsTabProps) {
       {/* Edit dialog */}
       <Dialog
         open={!!editSetup}
-        onOpenChange={(open) => !open && setEditSetup(null)}
+        onOpenChange={(open) => {
+          if (!open) setEditSetup(null);
+        }}
       >
         <DialogContent>
           <DialogHeader>
@@ -174,24 +167,6 @@ export function SetupsTab({ setups, trades }: SetupsTabProps) {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="edit-description">Description</Label>
-                <Textarea
-                  id="edit-description"
-                  name="description"
-                  defaultValue={editSetup.description || ""}
-                  rows={2}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="edit-rules">Rules / Criteria</Label>
-                <Textarea
-                  id="edit-rules"
-                  name="rules"
-                  defaultValue={editSetup.rules || ""}
-                  rows={3}
-                />
-              </div>
-              <div className="space-y-2">
                 <Label>Color</Label>
                 <div className="flex gap-2">
                   {COLORS.map((color) => (
@@ -200,7 +175,9 @@ export function SetupsTab({ setups, trades }: SetupsTabProps) {
                         type="radio"
                         name="color"
                         value={color}
-                        defaultChecked={color === (editSetup.color || COLORS[0])}
+                        defaultChecked={
+                          color === (editSetup.color || COLORS[0])
+                        }
                         className="sr-only peer"
                       />
                       <div
@@ -211,6 +188,7 @@ export function SetupsTab({ setups, trades }: SetupsTabProps) {
                   ))}
                 </div>
               </div>
+
               <Button
                 type="submit"
                 className="w-full bg-gradient-to-r from-blue-500 to-indigo-600 text-white border-0"
@@ -244,14 +222,7 @@ export function SetupsTab({ setups, trades }: SetupsTabProps) {
                 style={{ backgroundColor: setup.color || COLORS[0] }}
               />
               <CardHeader className="flex flex-row items-start justify-between pb-2">
-                <div>
-                  <CardTitle className="text-base">{setup.name}</CardTitle>
-                  {setup.description && (
-                    <p className="mt-1 text-xs text-muted-foreground line-clamp-2">
-                      {setup.description}
-                    </p>
-                  )}
-                </div>
+                <CardTitle className="text-base">{setup.name}</CardTitle>
                 <div className="flex gap-1">
                   <Button
                     variant="ghost"
@@ -296,13 +267,6 @@ export function SetupsTab({ setups, trades }: SetupsTabProps) {
                     </p>
                   </div>
                 </div>
-                {setup.rules && (
-                  <div className="mt-3 rounded-md bg-muted/30 p-2">
-                    <p className="text-xs text-muted-foreground line-clamp-3">
-                      {setup.rules}
-                    </p>
-                  </div>
-                )}
               </CardContent>
             </Card>
           ))}

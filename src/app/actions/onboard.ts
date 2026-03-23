@@ -36,29 +36,6 @@ export async function onboardConnectExchange(data: {
   return { id: exchange.id, name: exchange.name };
 }
 
-// ─── Onboard: Create Setup ──────────────────────────────────────────────────
-
-export async function onboardCreateSetup(data: {
-  name: string;
-  description?: string;
-  rules?: string;
-  color?: string;
-}) {
-  const userId = await getAuthUserId();
-
-  const setup = await prisma.setup.create({
-    data: {
-      userId,
-      name: data.name,
-      description: data.description || null,
-      rules: data.rules || null,
-      color: data.color || "#3b82f6",
-    },
-  });
-
-  return { id: setup.id, name: setup.name, color: setup.color };
-}
-
 // ─── Onboard: Complete ──────────────────────────────────────────────────────
 
 export async function completeOnboarding() {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback } from "react";
 import { signOut } from "next-auth/react";
 import {
   BarChart3,
@@ -8,6 +8,7 @@ import {
   LayoutDashboard,
   LogOut,
   MessageSquare,
+  RefreshCw,
   Settings,
   Sparkles,
   Wrench,
@@ -40,22 +41,8 @@ interface DashboardShellProps {
   };
   trades: any[];
   setups: any[];
-  conditions: any[];
   exchanges: any[];
   chatSessions: any[];
-}
-
-export interface TradeNotification {
-  type: "new_trade" | "closed_trade";
-  trade: {
-    id: string;
-    symbol: string;
-    side: string;
-    entryPrice?: number;
-    exitPrice?: number;
-    pnl?: number;
-    status: string;
-  };
 }
 
 const tabs: { id: Tab; label: string; icon: React.ElementType }[] = [
@@ -69,7 +56,6 @@ export function DashboardShell({
   user,
   trades,
   setups,
-  conditions,
   exchanges,
   chatSessions,
 }: DashboardShellProps) {
@@ -77,21 +63,23 @@ export function DashboardShell({
   const [mobileChatOpen, setMobileChatOpen] = useState(false);
   const [chatContext, setChatContext] = useState<any>(null);
 
-  // Trade notifications queue — TradeSync pushes here, AIChatPanel consumes
-  const [tradeNotifications, setTradeNotifications] = useState<TradeNotification[]>([]);
+  // Sync trigger — TradeSync exposes a trigger function, shell calls it
+  const [syncTrigger, setSyncTrigger] = useState(0);
+  const [newTradeCount, setNewTradeCount] = useState(0);
 
   const handleOpenChatForContext = (context: any) => {
     setChatContext(context);
-    // On mobile, open the chat overlay
     setMobileChatOpen(true);
   };
 
-  const handleTradeNotification = useCallback((notification: TradeNotification) => {
-    setTradeNotifications((prev) => [...prev, notification]);
+  const handleManualSync = useCallback(() => {
+    setSyncTrigger((prev) => prev + 1);
   }, []);
 
-  const handleClearNotification = useCallback((tradeId: string) => {
-    setTradeNotifications((prev) => prev.filter((n) => n.trade.id !== tradeId));
+  const handleNewTrades = useCallback((count: number) => {
+    setNewTradeCount((prev) => prev + count);
+    // Auto-clear highlight after 10s
+    setTimeout(() => setNewTradeCount(0), 10000);
   }, []);
 
   const trialDaysLeft = user.trialEndsAt
@@ -205,20 +193,34 @@ export function DashboardShell({
 
           {/* Actions */}
           <div className="flex items-center gap-2">
+            {/* Manual Sync Button */}
+            {exchanges.length > 0 && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleManualSync}
+                className="gap-2 text-xs"
+              >
+                <RefreshCw className="h-3.5 w-3.5" />
+                Sync Trades
+              </Button>
+            )}
+
             {user.plan === "trial" && (
               <Badge variant="outline" className="text-xs">
                 Trial: {trialDaysLeft}d left
               </Badge>
             )}
-            {/* Notification badge for pending trade notifications */}
-            {tradeNotifications.length > 0 && (
-              <div className="hidden md:flex items-center gap-1.5 rounded-full bg-amber-500/10 border border-amber-500/20 px-3 py-1">
+
+            {/* New trades notification */}
+            {newTradeCount > 0 && (
+              <div className="hidden md:flex items-center gap-1.5 rounded-full bg-blue-500/10 border border-blue-500/20 px-3 py-1">
                 <span className="relative flex h-2 w-2">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500" />
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75" />
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500" />
                 </span>
-                <span className="text-xs text-amber-600 font-medium">
-                  {tradeNotifications.length} trade{tradeNotifications.length > 1 ? "s" : ""} need journaling
+                <span className="text-xs text-blue-600 font-medium">
+                  {newTradeCount} new trade{newTradeCount > 1 ? "s" : ""} synced
                 </span>
               </div>
             )}
@@ -230,7 +232,7 @@ export function DashboardShell({
           {/* Tab content */}
           <main className="flex-1 overflow-auto p-4 md:p-6">
             {activeTab === "dashboard" && (
-              <DashboardTab trades={trades} setups={setups} conditions={conditions} onOpenChat={handleOpenChatForContext} />
+              <DashboardTab trades={trades} setups={setups} onOpenChat={handleOpenChatForContext} />
             )}
             {activeTab === "calendar" && <CalendarTab trades={trades} />}
             {activeTab === "setups" && <SetupsTab setups={setups} trades={trades} />}
@@ -244,21 +246,14 @@ export function DashboardShell({
             <div className="flex items-center justify-between border-b border-border/40 px-4 py-3 shrink-0 bg-background/50 backdrop-blur-sm z-10">
               <div className="flex items-center gap-2">
                 <Sparkles className="h-4 w-4 text-emerald-500" />
-                <h3 className="text-sm font-semibold">AI Assistant</h3>
+                <h3 className="text-sm font-semibold">AI Analytics</h3>
               </div>
-              {tradeNotifications.length > 0 && (
-                <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-amber-500 text-[10px] font-bold text-white px-1.5">
-                  {tradeNotifications.length}
-                </span>
-              )}
             </div>
             <div className="flex-1 overflow-hidden">
               <AIChatPanel
                 chatSessions={chatSessions}
                 user={user}
                 tradeContext={chatContext}
-                tradeNotifications={tradeNotifications}
-                onClearNotification={handleClearNotification}
               />
             </div>
           </aside>
@@ -271,7 +266,7 @@ export function DashboardShell({
           <div className="flex items-center justify-between border-b border-border/40 px-4 py-3 bg-background/50 backdrop-blur-sm">
             <div className="flex items-center gap-2">
               <Sparkles className="h-4 w-4 text-emerald-500" />
-              <h3 className="text-sm font-semibold">AI Assistant</h3>
+              <h3 className="text-sm font-semibold">AI Analytics</h3>
             </div>
             <Button variant="ghost" size="icon-xs" onClick={() => setMobileChatOpen(false)} className="h-7 w-7">
               <X className="h-4 w-4" />
@@ -282,8 +277,6 @@ export function DashboardShell({
               chatSessions={chatSessions}
               user={user}
               tradeContext={chatContext}
-              tradeNotifications={tradeNotifications}
-              onClearNotification={handleClearNotification}
             />
           </div>
         </div>
@@ -312,25 +305,20 @@ export function DashboardShell({
         <button
           onClick={() => setMobileChatOpen(!mobileChatOpen)}
           className={cn(
-            "flex flex-1 flex-col items-center gap-1 py-2 text-[10px] relative",
+            "flex flex-1 flex-col items-center gap-1 py-2 text-[10px]",
             mobileChatOpen ? "text-primary" : "text-muted-foreground"
           )}
         >
           <MessageSquare className="h-4 w-4" />
           AI
-          {tradeNotifications.length > 0 && (
-            <span className="absolute top-1 right-1/4 flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-amber-500 text-[8px] font-bold text-white px-0.5">
-              {tradeNotifications.length}
-            </span>
-          )}
         </button>
       </div>
 
-      {/* Trade sync — auto-fetches from exchanges on mount */}
+      {/* Trade sync — manual trigger only */}
       <TradeSync
-        setups={setups}
         hasExchanges={exchanges.length > 0}
-        onTradeNotification={handleTradeNotification}
+        syncTrigger={syncTrigger}
+        onNewTrades={handleNewTrades}
       />
     </div>
   );

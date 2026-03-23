@@ -6,18 +6,13 @@ import {
   Send,
   Loader2,
   BarChart2,
-  BookOpen,
-  Zap,
-  Wrench,
+  Database,
+  Calculator,
   CheckCircle2,
-  TrendingUp,
-  TrendingDown,
-  Bell,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useChat } from "@ai-sdk/react";
 import { cn } from "@/lib/utils";
-import type { TradeNotification } from "@/components/dashboard/shell";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -25,22 +20,18 @@ interface AIChatPanelProps {
   chatSessions?: any[];
   user?: any;
   tradeContext?: any;
-  tradeNotifications?: TradeNotification[];
-  onClearNotification?: (tradeId: string) => void;
 }
 
 // ─── Helpers for SDK v6 UIMessage ────────────────────────────────────────────
 
 /** Extract concatenated text from a UIMessage's parts array */
 function getMessageText(message: any): string {
-  // SDK v6: parts array
   if (message.parts && Array.isArray(message.parts)) {
     return message.parts
       .filter((p: any) => p.type === "text")
       .map((p: any) => p.text || "")
       .join("");
   }
-  // Fallback: legacy content string
   if (typeof message.content === "string") return message.content;
   return "";
 }
@@ -57,7 +48,6 @@ function getToolParts(message: any): any[] {
 /** Get tool name from a part */
 function getToolName(part: any): string {
   if (part.type === "dynamic-tool") return part.toolName || "unknown";
-  // type is "tool-{name}" — extract the name
   if (typeof part.type === "string" && part.type.startsWith("tool-")) {
     return part.type.slice(5);
   }
@@ -70,15 +60,10 @@ function hasToolOutput(part: any): boolean {
 }
 
 export function AIChatPanel({
-  chatSessions,
-  user,
   tradeContext,
-  tradeNotifications = [],
-  onClearNotification,
 }: AIChatPanelProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const initializedTradeContext = useRef<string | null>(null);
-  const processedNotifications = useRef<Set<string>>(new Set());
 
   const {
     messages,
@@ -86,7 +71,6 @@ export function AIChatPanel({
     status,
   } = useChat({
     api: "/api/chat",
-    body: { context: "dashboard" },
   } as any) as any;
 
   const [input, setInput] = useState("");
@@ -104,43 +88,15 @@ export function AIChatPanel({
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isLoading]);
 
-  // Inject trade context into conversation (from dashboard "Journal with AI" buttons)
+  // Inject trade context (from dashboard "Analyze" buttons)
   useEffect(() => {
     if (tradeContext && tradeContext.id !== initializedTradeContext.current) {
       initializedTradeContext.current = tradeContext.id;
-      const isWin = tradeContext.pnl && Number(tradeContext.pnl) > 0;
       sendMessage({
-        text: `I want to journal this trade: ${tradeContext.symbol} (${tradeContext.side?.toUpperCase()}). It was ${isWin ? "a winning trade" : "a losing trade"} with a realized PnL of $${tradeContext.pnl}. Can you help me log my psychology?`,
+        text: `Analyze this trade: ${tradeContext.symbol} (${tradeContext.side?.toUpperCase()}), PnL: $${tradeContext.pnl}, Status: ${tradeContext.status}. What insights can you give me?`,
       });
     }
   }, [tradeContext, sendMessage]);
-
-  // Process trade notifications — inject system-like messages into the chat
-  useEffect(() => {
-    if (tradeNotifications.length === 0) return;
-    if (isLoading) return;
-
-    for (const notification of tradeNotifications) {
-      const key = `${notification.type}-${notification.trade.id}`;
-      if (processedNotifications.current.has(key)) continue;
-      processedNotifications.current.add(key);
-
-      const trade = notification.trade;
-
-      if (notification.type === "new_trade") {
-        sendMessage({
-          text: `[SYSTEM NOTIFICATION] A new trade was just opened: ${trade.symbol} ${trade.side?.toUpperCase()} at entry price ${trade.entryPrice || "market"}. Trade ID: ${trade.id}. Please ask me about my entry reasons, risk/reward plan, and which market conditions are present.`,
-        });
-      } else if (notification.type === "closed_trade") {
-        const isWin = trade.pnl !== undefined && Number(trade.pnl) > 0;
-        sendMessage({
-          text: `[SYSTEM NOTIFICATION] A trade was just closed: ${trade.symbol} ${trade.side?.toUpperCase()} — ${isWin ? "WIN" : "LOSS"} with PnL of $${trade.pnl?.toFixed(2)}. Trade ID: ${trade.id}. Please help me journal the exit: why did it hit SL/TP, lessons learned, and post-trade review.`,
-        });
-      }
-
-      onClearNotification?.(trade.id);
-    }
-  }, [tradeNotifications, isLoading, sendMessage, onClearNotification]);
 
   const messageList = messages || [];
 
@@ -156,18 +112,20 @@ export function AIChatPanel({
             </div>
             <div className="space-y-1.5">
               <p className="font-semibold text-foreground text-sm">
-                Your AI Trading Coach
+                AI Trade Analytics
               </p>
               <p className="text-xs text-muted-foreground leading-relaxed">
-                Ask about your win rate, analyze conditions, journal trades, or
-                get insights on your performance.
+                Ask questions about your trading data. I can run SQL queries and
+                compute advanced metrics for you.
               </p>
             </div>
             <div className="w-full space-y-1.5 mt-1">
               {[
-                "What's my win rate this month?",
-                "Which conditions perform best?",
-                "Analyze my last 10 trades",
+                "What's my win rate by session?",
+                "Show me my best performing setups",
+                "Calculate my expectancy and profit factor",
+                "What's my max drawdown?",
+                "Analyze my performance on trending vs range markets",
               ].map((suggestion) => (
                 <button
                   key={suggestion}
@@ -178,10 +136,6 @@ export function AIChatPanel({
                 </button>
               ))}
             </div>
-            <div className="w-full h-px bg-border/30" />
-            <p className="text-[10px] uppercase tracking-widest text-muted-foreground/50">
-              Always listening for new trades
-            </p>
           </div>
         )}
 
@@ -189,38 +143,6 @@ export function AIChatPanel({
         {messageList.map((m: any) => {
           const text = getMessageText(m);
           const toolParts = getToolParts(m);
-          const isSystemNotification =
-            m.role === "user" && text.startsWith("[SYSTEM NOTIFICATION]");
-
-          // Render system notifications as centered pills
-          if (isSystemNotification) {
-            const isNewTrade = text.includes("new trade was just opened");
-            return (
-              <div
-                key={m.id}
-                className="flex justify-center animate-in fade-in duration-300"
-              >
-                <div
-                  className={cn(
-                    "flex items-center gap-2 px-3 py-2 rounded-full text-xs font-medium border",
-                    isNewTrade
-                      ? "bg-blue-500/10 border-blue-500/20 text-blue-600 dark:text-blue-400"
-                      : "bg-amber-500/10 border-amber-500/20 text-amber-600 dark:text-amber-400"
-                  )}
-                >
-                  {isNewTrade ? (
-                    <TrendingUp className="h-3.5 w-3.5" />
-                  ) : (
-                    <TrendingDown className="h-3.5 w-3.5" />
-                  )}
-                  <span>
-                    {isNewTrade ? "New trade detected" : "Trade closed"}
-                  </span>
-                  <Bell className="h-3 w-3 animate-pulse" />
-                </div>
-              </div>
-            );
-          }
 
           return (
             <div
@@ -247,28 +169,9 @@ export function AIChatPanel({
                   const toolName = getToolName(part);
                   const done = hasToolOutput(part);
 
-                  if (toolName === "getStats") {
-                    return (
-                      <div
-                        key={part.toolCallId}
-                        className="mt-3 flex items-center gap-2.5 text-muted-foreground bg-secondary/40 px-3 py-2 rounded-xl text-xs border border-border/30"
-                      >
-                        {done ? (
-                          <>
-                            <BarChart2 className="h-3.5 w-3.5 text-emerald-500" />
-                            <span className="font-medium">Stats loaded successfully</span>
-                          </>
-                        ) : (
-                          <>
-                            <Loader2 className="h-3.5 w-3.5 animate-spin text-blue-500" />
-                            <span className="italic">Fetching your trading stats...</span>
-                          </>
-                        )}
-                      </div>
-                    );
-                  }
-
-                  if (toolName === "getConditionAnalytics") {
+                  if (toolName === "queryTrades") {
+                    const desc = part.input?.description || "Running query...";
+                    const rowCount = done ? part.output?.rowCount : null;
                     return (
                       <div
                         key={part.toolCallId}
@@ -276,20 +179,23 @@ export function AIChatPanel({
                       >
                         {done ? (
                           <>
-                            <Zap className="h-3.5 w-3.5 text-blue-500" />
-                            <span className="font-medium">Condition analytics loaded</span>
+                            <Database className="h-3.5 w-3.5 text-blue-500" />
+                            <span className="font-medium">
+                              {desc} ({rowCount} row{rowCount !== 1 ? "s" : ""})
+                            </span>
                           </>
                         ) : (
                           <>
                             <Loader2 className="h-3.5 w-3.5 animate-spin text-blue-500" />
-                            <span className="italic">Analyzing conditions...</span>
+                            <span className="italic">{desc}</span>
                           </>
                         )}
                       </div>
                     );
                   }
 
-                  if (toolName === "getDetailedAnalytics") {
+                  if (toolName === "compute") {
+                    const desc = part.input?.description || "Computing...";
                     return (
                       <div
                         key={part.toolCallId}
@@ -297,120 +203,20 @@ export function AIChatPanel({
                       >
                         {done ? (
                           <>
-                            <BarChart2 className="h-3.5 w-3.5 text-purple-500" />
-                            <span className="font-medium">Detailed analytics ready</span>
+                            <Calculator className="h-3.5 w-3.5 text-purple-500" />
+                            <span className="font-medium">{desc}</span>
                           </>
                         ) : (
                           <>
                             <Loader2 className="h-3.5 w-3.5 animate-spin text-purple-500" />
-                            <span className="italic">Running deep analysis...</span>
+                            <span className="italic">{desc}</span>
                           </>
                         )}
                       </div>
                     );
                   }
 
-                  if (toolName === "createMarketConditions") {
-                    return (
-                      <div
-                        key={part.toolCallId}
-                        className="mt-3 p-2.5 bg-blue-500/5 rounded-xl border border-blue-500/20"
-                      >
-                        {done ? (
-                          <div className="space-y-1.5">
-                            <div className="flex items-center gap-2 text-blue-500 font-medium text-xs">
-                              <Zap className="h-3.5 w-3.5" />
-                              <span>Conditions Saved</span>
-                            </div>
-                            {part.output?.created?.length > 0 && (
-                              <div className="flex flex-wrap gap-1 mt-1">
-                                {part.output.created.map((c: string) => (
-                                  <span
-                                    key={c}
-                                    className="text-[11px] bg-blue-500/10 text-blue-500 border border-blue-500/20 rounded-full px-2 py-0.5"
-                                  >
-                                    {c}
-                                  </span>
-                                ))}
-                              </div>
-                            )}
-                          </div>
-                        ) : (
-                          <div className="flex items-center gap-2 text-muted-foreground text-xs">
-                            <Loader2 className="h-3.5 w-3.5 animate-spin text-blue-500" />
-                            <span className="italic">Saving conditions...</span>
-                          </div>
-                        )}
-                      </div>
-                    );
-                  }
-
-                  if (toolName === "createSetup") {
-                    return (
-                      <div
-                        key={part.toolCallId}
-                        className="mt-3 flex items-center gap-2.5 text-muted-foreground bg-emerald-500/5 px-3 py-2 rounded-xl text-xs border border-emerald-500/20"
-                      >
-                        {done ? (
-                          <>
-                            <Wrench className="h-3.5 w-3.5 text-emerald-500" />
-                            <span className="font-medium">
-                              Setup created: {part.output?.setupName || part.input?.setupName}
-                            </span>
-                          </>
-                        ) : (
-                          <>
-                            <Loader2 className="h-3.5 w-3.5 animate-spin text-emerald-500" />
-                            <span className="italic">Creating setup...</span>
-                          </>
-                        )}
-                      </div>
-                    );
-                  }
-
-                  if (toolName === "addTradeJournal") {
-                    return (
-                      <div
-                        key={part.toolCallId}
-                        className="mt-3 flex items-center gap-2.5 text-muted-foreground bg-amber-500/5 px-3 py-2 rounded-xl text-xs border border-amber-500/20"
-                      >
-                        {done ? (
-                          <>
-                            <BookOpen className="h-3.5 w-3.5 text-amber-500" />
-                            <span className="font-medium">Entry journal saved</span>
-                          </>
-                        ) : (
-                          <>
-                            <Loader2 className="h-3.5 w-3.5 animate-spin text-amber-500" />
-                            <span className="italic">Logging trade entry...</span>
-                          </>
-                        )}
-                      </div>
-                    );
-                  }
-
-                  if (toolName === "journalTrade") {
-                    return (
-                      <div
-                        key={part.toolCallId}
-                        className="mt-3 flex items-center gap-2.5 text-muted-foreground bg-amber-500/5 px-3 py-2 rounded-xl text-xs border border-amber-500/20"
-                      >
-                        {done ? (
-                          <>
-                            <BookOpen className="h-3.5 w-3.5 text-amber-500" />
-                            <span className="font-medium">Trade journal updated</span>
-                          </>
-                        ) : (
-                          <>
-                            <Loader2 className="h-3.5 w-3.5 animate-spin text-amber-500" />
-                            <span className="italic">Saving trade journal...</span>
-                          </>
-                        )}
-                      </div>
-                    );
-                  }
-
-                  // Fallback
+                  // Fallback for any unknown tool
                   return (
                     <div
                       key={part.toolCallId}
@@ -476,7 +282,7 @@ export function AIChatPanel({
               }
             }}
             disabled={isLoading}
-            placeholder="Ask about your trades..."
+            placeholder="Ask about your trading data..."
             className="flex-1 bg-transparent border-0 focus:ring-0 text-[13px] py-1.5 px-3 resize-none min-h-[38px] max-h-[140px] placeholder:text-muted-foreground/40 leading-relaxed ring-0 outline-none appearance-none"
             rows={1}
             autoFocus

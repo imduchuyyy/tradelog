@@ -2,7 +2,7 @@ import { setRequestLocale } from "next-intl/server";
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-import { OnboardChat } from "@/components/onboard/onboard-chat";
+import { OnboardConnect } from "@/components/onboard/onboard-chat";
 
 export default async function OnboardPage({
   params,
@@ -32,13 +32,12 @@ export default async function OnboardPage({
     redirect(`/${locale}/login`);
   }
 
-  // Already onboarded, go to dashboard
   if (user.onboarded) {
     redirect(`/${locale}/dashboard`);
   }
 
   return (
-    <OnboardChat
+    <OnboardConnect
       user={{ id: user.id, name: user.name, image: user.image }}
       locale={locale}
     />

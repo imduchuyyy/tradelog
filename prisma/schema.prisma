@@ -32,7 +32,6 @@ model User {
   setups       Setup[]
   trades       Trade[]
   chatSessions ChatSession[]
-  conditions   Condition[]
 }
 
 model Account {
@@ -90,35 +89,19 @@ model Exchange {
   trades Trade[]
 }
 
-// ─── Trade setups & Conditions ──────────────────────────────────────────────────
+// ─── Trade Setups ─────────────────────────────────────────────────────────────
 
-model Condition {
-  id     String @id @default(cuid())
+model Setup {
+  id     String  @id @default(cuid())
   userId String
-  name   String // e.g., "Swept liquid H4", "DOM USDT is up"
+  name   String
+  color  String? // hex color for UI display
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
   trades Trade[]
-  setups Setup[]
-}
-
-model Setup {
-  id          String  @id @default(cuid())
-  userId      String
-  name        String
-  description String?
-  rules       String? // JSON or markdown text for setup rules
-  color       String? // hex color for UI display
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  trades     Trade[]
-  conditions Condition[]
 }
 
 // ─── Trades ───────────────────────────────────────────────────────────────────
@@ -127,7 +110,6 @@ model Trade {
   id         String  @id @default(cuid())
   userId     String
   exchangeId String?
-  setupId    String?
 
   // External exchange trade ID for deduplication
   externalTradeId String? @unique
@@ -139,28 +121,29 @@ model Trade {
   entryPrice Float
   exitPrice  Float?
   quantity   Float
-  leverage   Float? @default(1)
-  stopLoss   Float?
-  takeProfit Float?
   pnl        Float? // realized PnL
   pnlPercent Float? // PnL as percentage
   fees       Float? @default(0)
 
-  // Tracing / journaling fields
-  setupReason     String? // reason for entering trade
-  psychology      String? // emotional state / mindset
-  marketCondition String? // trending, ranging, volatile, etc.
-  confidenceLevel Int? // 1-10 scale
+  // ─── Entry journaling fields ────────────────────────────────────────────
+  marketCondition String? // "trending" | "range" | "50/50" | "counter_trend"
+  session         String? // "sydney" | "tokyo" | "london" | "new_york"
+  entryTimeframe  String? // "1m" | "5m" | "15m" | "1h" | "4h" | "1d" etc.
+  riskRewardRatio Float?  // planned R:R e.g. 2.5
+  confidenceLevel Int?    // 0-10 scale
   notes           String? // general notes
 
-  // Post-trade / closing journaling fields
-  exitReason     String?
-  exitPsychology String?
-  mistakes       String?
-  lessons        String?
+  // ─── Post-trade / closing fields ────────────────────────────────────────
+  exitReason      String? // why SL/TP was hit or manual exit reason
+  lessons         String? // lessons learned from this trade
+  disciplineLevel Int?    // 0-10 how disciplined was the execution
+  holdingTime     Int?    // holding duration in minutes (auto-computed from entryDate/exitDate)
+  mae             Float?  // Maximum Adverse Excursion (max drawdown during trade)
+  mfe             Float?  // Maximum Favorable Excursion (max unrealized profit during trade)
 
   // Sync metadata
   needsJournal Boolean   @default(false) // true when synced from exchange, awaiting user journal entry
+  isNew        Boolean   @default(false) // true when just synced, for highlight in UI
   syncedAt     DateTime? // when last synced from exchange
 
   entryDate DateTime  @default(now())
@@ -169,11 +152,10 @@ model Trade {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  exchange   Exchange?   @relation(fields: [exchangeId], references: [id], onDelete: SetNull)
-  setup      Setup?      @relation(fields: [setupId], references: [id], onDelete: SetNull)
-  conditions Condition[]
-  files      TradeFile[]
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  exchange Exchange? @relation(fields: [exchangeId], references: [id], onDelete: SetNull)
+  setups   Setup[]   // M:N — a trade can have multiple setups
+  files    TradeFile[]
 }
 
 model TradeFile {

@@ -2,15 +2,16 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, RefreshCw } from "lucide-react";
-import type { TradeNotification } from "@/components/dashboard/shell";
+import { Loader2, RefreshCw, CheckCircle2, AlertCircle } from "lucide-react";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 interface TradeSyncProps {
-  setups: any[];
   hasExchanges: boolean;
-  onTradeNotification?: (notification: TradeNotification) => void;
+  /** Increment this to trigger a manual sync */
+  syncTrigger: number;
+  /** Called with the count of newly synced trades */
+  onNewTrades?: (count: number) => void;
 }
 
 /**
@@ -32,14 +33,15 @@ function sendBrowserNotification(title: string, body: string) {
 }
 
 export function TradeSync({
-  setups,
   hasExchanges,
-  onTradeNotification,
+  syncTrigger,
+  onNewTrades,
 }: TradeSyncProps) {
   const router = useRouter();
   const [syncing, setSyncing] = useState(false);
   const [syncError, setSyncError] = useState<string | null>(null);
-  const hasSynced = useRef(false);
+  const [syncSuccess, setSyncSuccess] = useState<string | null>(null);
+  const prevTrigger = useRef(syncTrigger);
 
   // Request browser notification permission on mount
   useEffect(() => {
@@ -50,69 +52,13 @@ export function TradeSync({
     }
   }, []);
 
-  // Handle sync results — notify AI chat + browser
-  const handleSyncResult = useCallback(
-    (result: any) => {
-      const newTrades = result.newTrades || [];
-      const closedTrades = result.closedTrades || [];
-
-      // Notify for each new trade
-      for (const trade of newTrades) {
-        sendBrowserNotification(
-          "New Trade Opened",
-          `${trade.symbol} ${trade.side?.toUpperCase()} at ${trade.entryPrice || "market"}`
-        );
-
-        onTradeNotification?.({
-          type: "new_trade",
-          trade: {
-            id: trade.id,
-            symbol: trade.symbol,
-            side: trade.side,
-            entryPrice: trade.entryPrice ? Number(trade.entryPrice) : undefined,
-            status: trade.status,
-          },
-        });
-      }
-
-      // Notify for each closed trade
-      for (const trade of closedTrades) {
-        const pnl = trade.pnl !== null && trade.pnl !== undefined ? Number(trade.pnl) : undefined;
-        const isWin = pnl !== undefined && pnl > 0;
-
-        sendBrowserNotification(
-          `Trade Closed — ${isWin ? "WIN" : "LOSS"}`,
-          `${trade.symbol} ${trade.side?.toUpperCase()} | PnL: $${pnl?.toFixed(2) || "N/A"}`
-        );
-
-        onTradeNotification?.({
-          type: "closed_trade",
-          trade: {
-            id: trade.id,
-            symbol: trade.symbol,
-            side: trade.side,
-            exitPrice: trade.exitPrice ? Number(trade.exitPrice) : undefined,
-            pnl,
-            status: trade.status,
-          },
-        });
-      }
-
-      // Refresh page data if anything changed
-      if (newTrades.length > 0 || closedTrades.length > 0) {
-        router.refresh();
-      }
-    },
-    [router, onTradeNotification]
-  );
-
-  // ── Initial one-shot sync on page load ─────────────────────────────────────
   const runSync = useCallback(async () => {
     if (!hasExchanges) return;
     if (syncing) return;
 
     setSyncing(true);
     setSyncError(null);
+    setSyncSuccess(null);
 
     try {
       const res = await fetch("/api/trades/sync");
@@ -126,7 +72,38 @@ export function TradeSync({
         setSyncError(result.errors[0]);
       }
 
-      handleSyncResult(result);
+      const newTrades = result.newTrades || [];
+      const closedTrades = result.closedTrades || [];
+      const totalNew = newTrades.length + closedTrades.length;
+
+      // Notify for each new trade
+      for (const trade of newTrades) {
+        sendBrowserNotification(
+          "New Trade Opened",
+          `${trade.symbol} ${trade.side?.toUpperCase()} at ${trade.entryPrice || "market"}`
+        );
+      }
+
+      // Notify for each closed trade
+      for (const trade of closedTrades) {
+        const pnl = trade.pnl !== null && trade.pnl !== undefined ? Number(trade.pnl) : undefined;
+        const isWin = pnl !== undefined && pnl > 0;
+        sendBrowserNotification(
+          `Trade Closed — ${isWin ? "WIN" : "LOSS"}`,
+          `${trade.symbol} ${trade.side?.toUpperCase()} | PnL: $${pnl?.toFixed(2) || "N/A"}`
+        );
+      }
+
+      if (totalNew > 0) {
+        onNewTrades?.(totalNew);
+        setSyncSuccess(`${totalNew} trade${totalNew > 1 ? "s" : ""} synced`);
+        router.refresh();
+      } else {
+        setSyncSuccess("All trades up to date");
+      }
+
+      // Clear success message after 5s
+      setTimeout(() => setSyncSuccess(null), 5000);
     } catch (err) {
       console.error("[TradeSync] Sync error:", err);
       setSyncError(
@@ -135,40 +112,15 @@ export function TradeSync({
     } finally {
       setSyncing(false);
     }
-  }, [hasExchanges, syncing, handleSyncResult]);
+  }, [hasExchanges, syncing, router, onNewTrades]);
 
-  // Run once on mount
+  // Watch syncTrigger for manual sync requests
   useEffect(() => {
-    if (hasSynced.current) return;
-    hasSynced.current = true;
-    runSync();
-  }, [runSync]);
-
-  // ── Background worker: polls /api/trades/sync every 60s ────────────────────
-  useEffect(() => {
-    if (!hasExchanges || typeof window === "undefined") return;
-
-    const worker = new Worker("/sync-worker.js");
-
-    worker.onmessage = (e) => {
-      const { type, payload } = e.data;
-
-      if (type === "SYNC_RESULT") {
-        handleSyncResult(payload);
-      } else if (type === "SYNC_ERROR") {
-        setSyncError(payload);
-      }
-    };
-
-    // Start background polling (first poll fires after 60s since initial
-    // sync already runs on mount)
-    worker.postMessage({ type: "START", payload: { interval: 60000 } });
-
-    return () => {
-      worker.postMessage({ type: "STOP" });
-      worker.terminate();
-    };
-  }, [hasExchanges, handleSyncResult]);
+    if (syncTrigger !== prevTrigger.current) {
+      prevTrigger.current = syncTrigger;
+      runSync();
+    }
+  }, [syncTrigger, runSync]);
 
   return (
     <>
@@ -182,9 +134,18 @@ export function TradeSync({
         </div>
       )}
 
+      {/* Sync success */}
+      {syncSuccess && !syncing && (
+        <div className="fixed bottom-20 right-4 z-40 flex items-center gap-2 rounded-full bg-card border border-emerald-500/30 px-4 py-2 shadow-lg md:bottom-4">
+          <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
+          <span className="text-xs text-emerald-600">{syncSuccess}</span>
+        </div>
+      )}
+
       {/* Sync error */}
       {syncError && !syncing && (
         <div className="fixed bottom-20 right-4 z-40 flex items-center gap-2 rounded-full bg-card border border-red-500/30 px-4 py-2 shadow-lg md:bottom-4">
+          <AlertCircle className="h-3.5 w-3.5 text-red-500" />
           <span className="text-xs text-red-500">{syncError}</span>
           <button
             onClick={() => {

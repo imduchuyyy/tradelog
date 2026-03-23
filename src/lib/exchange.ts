@@ -14,7 +14,6 @@ export interface SyncedNewTrade {
   side: "long" | "short";
   entryPrice: number;
   quantity: number;
-  leverage: number;
   fees: number;
   entryDate: Date;
   exchangeId: string;
@@ -106,7 +105,6 @@ interface PositionInfo {
   side: "long" | "short";
   contracts: number;
   entryPrice: number;
-  leverage: number;
   unrealizedPnl: number;
   timestamp: number | null;
 }
@@ -129,7 +127,6 @@ async function fetchOpenPositions(
           side: (pos.side === "short" ? "short" : "long") as "long" | "short",
           contracts,
           entryPrice: pos.entryPrice ?? 0,
-          leverage: pos.leverage ?? 1,
           unrealizedPnl: pos.unrealizedPnl ?? 0,
           timestamp: pos.timestamp ?? null,
         });
@@ -230,8 +227,8 @@ export async function syncUserTrades(userId: string): Promise<SyncResult> {
                 status: "open",
                 entryPrice: pos.entryPrice,
                 quantity: pos.contracts,
-                leverage: pos.leverage,
                 needsJournal: true,
+                isNew: true,
                 syncedAt: new Date(),
                 entryDate: actualEntryDate,
                 fees: entryFees,
@@ -245,7 +242,6 @@ export async function syncUserTrades(userId: string): Promise<SyncResult> {
               side: pos.side,
               entryPrice: pos.entryPrice,
               quantity: pos.contracts,
-              leverage: pos.leverage,
               fees: entryFees,
               entryDate: trade.entryDate,
               exchangeId: dbExchange.id,
@@ -336,9 +332,7 @@ export async function syncUserTrades(userId: string): Promise<SyncResult> {
           }
           const pnlPercent =
             dbTrade.entryPrice > 0
-              ? (priceDiff / dbTrade.entryPrice) *
-                100 *
-                (dbTrade.leverage || 1)
+              ? (priceDiff / dbTrade.entryPrice) * 100
               : 0;
 
           await prisma.trade.update({

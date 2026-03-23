@@ -1,26 +1,34 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useTransition, useCallback, useRef, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+  DialogTrigger,
+  DialogClose,
+} from "@/components/ui/dialog";
 import {
   ChevronDown,
   ChevronRight,
-  Target,
   TrendingUp,
-  TrendingDown,
-  DollarSign,
-  BarChart2,
-  Edit,
-  CheckSquare,
-  Zap,
-  Trophy,
-  AlertTriangle,
-  Search,
   Percent,
-  Scale,
+  Filter,
+  X,
+  Clock,
+  Activity,
+  Zap,
+  BookOpen,
+  Pencil,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -38,102 +46,187 @@ import {
   YAxis,
   Cell,
 } from "recharts";
+import { journalTrade } from "@/app/actions";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
+
+// ─── Constants ───────────────────────────────────────────────────────────────
+
+const MARKET_CONDITIONS = [
+  { value: "trending", label: "Trending" },
+  { value: "range", label: "Range" },
+  { value: "50/50", label: "50/50" },
+  { value: "counter_trend", label: "Counter Trend" },
+];
+
+const SESSIONS = [
+  { value: "sydney", label: "Sydney" },
+  { value: "tokyo", label: "Tokyo" },
+  { value: "london", label: "London" },
+  { value: "new_york", label: "New York" },
+];
+
+const TIMEFRAMES = ["1m", "5m", "15m", "30m", "1h", "4h", "1d", "1w"];
+
+// ─── Types ───────────────────────────────────────────────────────────────────
+
 interface DashboardTabProps {
   trades: any[];
   setups?: any[];
-  conditions?: any[];
   onOpenChat?: (context: any) => void;
 }
 
-export function DashboardTab({
-  trades,
-  setups,
-  conditions = [],
-  onOpenChat,
-}: DashboardTabProps) {
+interface Filters {
+  setup: string;
+  marketCondition: string;
+  session: string;
+  side: string;
+  status: string;
+  minConfidence: string;
+  maxConfidence: string;
+  minDiscipline: string;
+  maxDiscipline: string;
+  minHoldingTime: string;
+  maxHoldingTime: string;
+  entryTimeframe: string;
+  symbol: string;
+}
+
+const defaultFilters: Filters = {
+  setup: "",
+  marketCondition: "",
+  session: "",
+  side: "",
+  status: "",
+  minConfidence: "",
+  maxConfidence: "",
+  minDiscipline: "",
+  maxDiscipline: "",
+  minHoldingTime: "",
+  maxHoldingTime: "",
+  entryTimeframe: "",
+  symbol: "",
+};
+
+// ─── Component ───────────────────────────────────────────────────────────────
+
+export function DashboardTab({ trades, setups = [], onOpenChat }: DashboardTabProps) {
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
-  const [conditionFilter, setConditionFilter] = useState<string>("");
+  const [filters, setFilters] = useState<Filters>(defaultFilters);
+  const [showFilters, setShowFilters] = useState(false);
 
   const toggleRow = (id: string) => {
-    const newExpanded = new Set(expandedRows);
-    if (newExpanded.has(id)) {
-      newExpanded.delete(id);
-    } else {
-      newExpanded.add(id);
-    }
-    setExpandedRows(newExpanded);
+    const next = new Set(expandedRows);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    setExpandedRows(next);
   };
 
-  // Filter conditions based on text input
-  const matchedConditions = useMemo(() => {
-    if (!conditionFilter.trim()) return [];
-    const search = conditionFilter.toLowerCase();
-    return conditions.filter((c) =>
-      c.name.toLowerCase().includes(search)
-    );
-  }, [conditions, conditionFilter]);
+  const setFilter = (key: keyof Filters, value: string) => {
+    setFilters((prev) => ({ ...prev, [key]: value }));
+  };
 
-  // --- Data Processing ---
-  const { metrics, chartsData, conditionPerformance } = useMemo(() => {
-    // 1. Filter by Condition (text-based search)
-    let filteredTrades = [...trades];
-    if (conditionFilter.trim() && matchedConditions.length > 0) {
-      const matchedIds = new Set(matchedConditions.map((c: any) => c.id));
-      filteredTrades = filteredTrades.filter(
-        (t) =>
-          t.conditions?.some((c: any) => matchedIds.has(c.id)) ||
-          t.setup?.conditions?.some((c: any) => matchedIds.has(c.id))
+  const clearFilters = () => setFilters(defaultFilters);
+
+  const activeFilterCount = Object.values(filters).filter(Boolean).length;
+
+  // ─── Data processing ────────────────────────────────────────────────────
+
+  const { metrics, chartsData, filteredTrades: sortedTrades } = useMemo(() => {
+    let filtered = [...trades].map((t) => ({
+      ...t,
+      pnl: t.pnl ? Number(t.pnl) : 0,
+      entryPrice: t.entryPrice ? Number(t.entryPrice) : 0,
+      exitPrice: t.exitPrice ? Number(t.exitPrice) : 0,
+      mae: t.mae ? Number(t.mae) : null,
+      mfe: t.mfe ? Number(t.mfe) : null,
+      riskRewardRatio: t.riskRewardRatio ? Number(t.riskRewardRatio) : null,
+    }));
+
+    // Apply filters
+    if (filters.setup) {
+      filtered = filtered.filter((t) =>
+        t.setups?.some((s: any) => s.id === filters.setup)
       );
     }
+    if (filters.marketCondition) {
+      filtered = filtered.filter((t) => t.marketCondition === filters.marketCondition);
+    }
+    if (filters.session) {
+      filtered = filtered.filter((t) => t.session === filters.session);
+    }
+    if (filters.side) {
+      filtered = filtered.filter((t) => t.side === filters.side);
+    }
+    if (filters.status) {
+      filtered = filtered.filter((t) => t.status === filters.status);
+    }
+    if (filters.minConfidence) {
+      filtered = filtered.filter((t) => t.confidenceLevel && t.confidenceLevel >= parseInt(filters.minConfidence));
+    }
+    if (filters.maxConfidence) {
+      filtered = filtered.filter((t) => t.confidenceLevel && t.confidenceLevel <= parseInt(filters.maxConfidence));
+    }
+    if (filters.minDiscipline) {
+      filtered = filtered.filter((t) => t.disciplineLevel && t.disciplineLevel >= parseInt(filters.minDiscipline));
+    }
+    if (filters.maxDiscipline) {
+      filtered = filtered.filter((t) => t.disciplineLevel && t.disciplineLevel <= parseInt(filters.maxDiscipline));
+    }
+    if (filters.minHoldingTime) {
+      filtered = filtered.filter((t) => t.holdingTime && t.holdingTime >= parseInt(filters.minHoldingTime));
+    }
+    if (filters.maxHoldingTime) {
+      filtered = filtered.filter((t) => t.holdingTime && t.holdingTime <= parseInt(filters.maxHoldingTime));
+    }
+    if (filters.entryTimeframe) {
+      filtered = filtered.filter((t) => t.entryTimeframe === filters.entryTimeframe);
+    }
+    if (filters.symbol) {
+      const sym = filters.symbol.toUpperCase();
+      filtered = filtered.filter((t) => t.symbol.toUpperCase().includes(sym));
+    }
 
-    // Sort chronological and cast Prisma Decimals to Numbers
-    const sorted = filteredTrades
-      .map((t) => ({
-        ...t,
-        pnl: t.pnl ? Number(t.pnl) : 0,
-        entryPrice: t.entryPrice ? Number(t.entryPrice) : 0,
-        exitPrice: t.exitPrice ? Number(t.exitPrice) : 0,
-      }))
-      .sort(
-        (a, b) =>
-          new Date(a.entryDate).getTime() - new Date(b.entryDate).getTime()
-      );
-
-    const closed = sorted.filter((t) => t.status === "closed");
-    const open = sorted.filter((t) => t.status === "open");
-    const wins = closed.filter((t) => t.pnl && t.pnl > 0);
-    const losses = closed.filter((t) => t.pnl !== null && t.pnl <= 0);
-
-    const winRate =
-      closed.length > 0 ? (wins.length / closed.length) * 100 : 0;
-    const totalPnl = closed.reduce((sum, t) => sum + (t.pnl || 0), 0);
-    const bestTrade = closed.reduce(
-      (max, t) => Math.max(max, t.pnl || 0),
-      0
+    // Sort chronologically
+    const sorted = filtered.sort(
+      (a, b) => new Date(b.entryDate).getTime() - new Date(a.entryDate).getTime()
     );
-    const worstTrade = closed.reduce(
-      (min, t) => Math.min(min, t.pnl || 0),
-      0
-    );
+    const chronological = [...sorted].reverse();
 
-    const avgWin =
-      wins.length > 0
-        ? wins.reduce((sum, t) => sum + (t.pnl || 0), 0) / wins.length
-        : 0;
-    const avgLoss =
-      losses.length > 0
-        ? losses.reduce((sum, t) => sum + (t.pnl || 0), 0) / losses.length
-        : 0;
+    const closed = chronological.filter((t) => t.status === "closed");
+    const open = filtered.filter((t) => t.status === "open");
+    const wins = closed.filter((t) => t.pnl > 0);
+    const losses = closed.filter((t) => t.pnl <= 0);
+
+    const winRate = closed.length > 0 ? (wins.length / closed.length) * 100 : 0;
+    const totalPnl = closed.reduce((sum, t) => sum + t.pnl, 0);
+    const bestTrade = closed.reduce((max, t) => Math.max(max, t.pnl), 0);
+    const worstTrade = closed.reduce((min, t) => Math.min(min, t.pnl), 0);
+
+    const avgWin = wins.length > 0 ? wins.reduce((s, t) => s + t.pnl, 0) / wins.length : 0;
+    const avgLoss = losses.length > 0 ? losses.reduce((s, t) => s + t.pnl, 0) / losses.length : 0;
     const riskReward = avgLoss !== 0 ? Math.abs(avgWin / avgLoss) : 0;
 
     // Profit Factor
-    const grossWin = wins.reduce((sum, t) => sum + (t.pnl || 0), 0);
-    const grossLoss = Math.abs(
-      losses.reduce((sum, t) => sum + (t.pnl || 0), 0)
-    );
+    const grossWin = wins.reduce((s, t) => s + t.pnl, 0);
+    const grossLoss = Math.abs(losses.reduce((s, t) => s + t.pnl, 0));
     const profitFactor = grossLoss !== 0 ? grossWin / grossLoss : 0;
+
+    // Expectancy: (WinRate * AvgWin) - (LossRate * |AvgLoss|)
+    const lossRate = closed.length > 0 ? (losses.length / closed.length) : 0;
+    const winRateDecimal = closed.length > 0 ? (wins.length / closed.length) : 0;
+    const expectancy = (winRateDecimal * avgWin) - (lossRate * Math.abs(avgLoss));
+
+    // Max Drawdown
+    let peak = 0;
+    let maxDrawdown = 0;
+    let runningPnl = 0;
+    for (const t of closed) {
+      runningPnl += t.pnl;
+      if (runningPnl > peak) peak = runningPnl;
+      const dd = peak - runningPnl;
+      if (dd > maxDrawdown) maxDrawdown = dd;
+    }
 
     // Streaks
     let currentStreak = 0;
@@ -141,44 +234,49 @@ export function DashboardTab({
     let maxLossStreak = 0;
     let tempStreak = 0;
     for (const t of closed) {
-      const isWin = (t.pnl || 0) > 0;
-      if (isWin) {
-        if (tempStreak > 0) tempStreak++;
-        else tempStreak = 1;
+      if (t.pnl > 0) {
+        tempStreak = tempStreak > 0 ? tempStreak + 1 : 1;
         maxWinStreak = Math.max(maxWinStreak, tempStreak);
       } else {
-        if (tempStreak < 0) tempStreak--;
-        else tempStreak = -1;
+        tempStreak = tempStreak < 0 ? tempStreak - 1 : -1;
         maxLossStreak = Math.max(maxLossStreak, Math.abs(tempStreak));
       }
       currentStreak = tempStreak;
     }
 
-    // Charts: Cumulative
-    let runningPnl = 0;
+    // Cumulative PnL chart
+    let cumulPnl = 0;
     const cumulative = closed.map((t) => {
-      runningPnl += t.pnl || 0;
+      cumulPnl += t.pnl;
       return {
-        date: new Date(t.entryDate).toLocaleDateString(undefined, {
-          month: "short",
-          day: "numeric",
-        }),
-        pnl: runningPnl,
+        date: new Date(t.entryDate).toLocaleDateString(undefined, { month: "short", day: "numeric" }),
+        pnl: cumulPnl,
       };
     });
 
-    // Charts: Setup Performance
-    const setupMap = new Map<
-      string,
-      { pnl: number; wins: number; total: number }
-    >();
+    // Win Rate over time chart
+    let winCount = 0;
+    const winRateData = closed.map((t, i) => {
+      if (t.pnl > 0) winCount++;
+      return {
+        date: new Date(t.entryDate).toLocaleDateString(undefined, { month: "short", day: "numeric" }),
+        winRate: (winCount / (i + 1)) * 100,
+      };
+    });
+
+    // Setup performance
+    const setupMap = new Map<string, { pnl: number; wins: number; total: number }>();
     closed.forEach((t) => {
-      const sName = t.setup?.name || "No Setup";
-      const existing = setupMap.get(sName) || { pnl: 0, wins: 0, total: 0 };
-      existing.pnl += t.pnl || 0;
-      existing.total++;
-      if (t.pnl && t.pnl > 0) existing.wins++;
-      setupMap.set(sName, existing);
+      const setupNames = t.setups?.length > 0
+        ? t.setups.map((s: any) => s.name)
+        : ["No Setup"];
+      for (const sName of setupNames) {
+        const existing = setupMap.get(sName) || { pnl: 0, wins: 0, total: 0 };
+        existing.pnl += t.pnl;
+        existing.total++;
+        if (t.pnl > 0) existing.wins++;
+        setupMap.set(sName, existing);
+      }
     });
     const setupsData = Array.from(setupMap.entries())
       .map(([name, stats]) => ({
@@ -189,60 +287,28 @@ export function DashboardTab({
       .sort((a, b) => b.pnl - a.pnl)
       .slice(0, 8);
 
-    // Charts: Condition Performance
-    const condMap = new Map<
-      string,
-      { pnl: number; wins: number; total: number }
-    >();
+    // Session performance
+    const sessionMap = new Map<string, { pnl: number; wins: number; total: number }>();
     closed.forEach((t) => {
-      const tradeConditions = t.conditions || [];
-      if (tradeConditions.length === 0) return;
-      tradeConditions.forEach((c: any) => {
-        const existing = condMap.get(c.name) || {
-          pnl: 0,
-          wins: 0,
-          total: 0,
-        };
-        existing.pnl += t.pnl || 0;
-        existing.total++;
-        if (t.pnl && t.pnl > 0) existing.wins++;
-        condMap.set(c.name, existing);
-      });
+      const sess = t.session || "Unknown";
+      const existing = sessionMap.get(sess) || { pnl: 0, wins: 0, total: 0 };
+      existing.pnl += t.pnl;
+      existing.total++;
+      if (t.pnl > 0) existing.wins++;
+      sessionMap.set(sess, existing);
     });
-    const conditionsData = Array.from(condMap.entries())
+    const sessionData = Array.from(sessionMap.entries())
       .map(([name, stats]) => ({
-        name,
+        name: SESSIONS.find((s) => s.value === name)?.label || name,
         pnl: stats.pnl,
         winRate: (stats.wins / stats.total) * 100,
         trades: stats.total,
       }))
-      .sort((a, b) => b.pnl - a.pnl)
-      .slice(0, 10);
-
-    // Best & Worst conditions
-    const bestCondition =
-      conditionsData.length > 0 ? conditionsData[0] : null;
-    const worstCondition =
-      conditionsData.length > 0
-        ? conditionsData[conditionsData.length - 1]
-        : null;
-
-    // Charts: Win Rate over time
-    let winCount = 0;
-    const winRateData = closed.map((t, i) => {
-      if (t.pnl && t.pnl > 0) winCount++;
-      return {
-        date: new Date(t.entryDate).toLocaleDateString(undefined, {
-          month: "short",
-          day: "numeric",
-        }),
-        winRate: (winCount / (i + 1)) * 100,
-      };
-    });
+      .sort((a, b) => b.pnl - a.pnl);
 
     return {
       metrics: {
-        totalTrades: filteredTrades.length,
+        totalTrades: filtered.length,
         closedTrades: closed.length,
         openTrades: open.length,
         winRate,
@@ -255,933 +321,1148 @@ export function DashboardTab({
         avgLoss,
         riskReward,
         profitFactor,
+        expectancy,
+        maxDrawdown,
         currentStreak,
         maxWinStreak,
         maxLossStreak,
       },
-      chartsData: {
-        cumulative,
-        setupsData,
-        conditionsData,
-        winRateData,
-      },
-      conditionPerformance: {
-        bestCondition,
-        worstCondition,
-        all: conditionsData,
-      },
+      chartsData: { cumulative, winRateData, setupsData, sessionData },
+      filteredTrades: sorted,
     };
-  }, [trades, conditionFilter, matchedConditions]);
+  }, [trades, filters]);
 
-  const pnlColor = (val: number) =>
-    val >= 0 ? "text-green-500" : "text-red-500";
-  const formatMoney = (val: number) =>
-    `${val >= 0 ? "+" : "-"}$${Math.abs(val).toFixed(2)}`;
+  const pnlColor = (val: number) => (val >= 0 ? "text-green-500" : "text-red-500");
+  const formatMoney = (val: number) => `${val >= 0 ? "+" : "-"}$${Math.abs(val).toFixed(2)}`;
 
-  const getConfidenceColor = (level?: number | null) => {
-    if (!level) return "bg-green-500/10 text-green-500 border-green-500/20";
-    if (level >= 8)
-      return "bg-green-500/10 text-green-500 border-green-500/20";
-    if (level >= 5)
-      return "bg-yellow-500/10 text-yellow-500 border-yellow-500/20";
-    return "bg-red-500/10 text-red-500 border-red-500/20";
+  const formatHoldingTime = (minutes: number | null | undefined) => {
+    if (!minutes) return "-";
+    if (minutes < 60) return `${minutes}m`;
+    if (minutes < 1440) return `${Math.floor(minutes / 60)}h ${minutes % 60}m`;
+    return `${Math.floor(minutes / 1440)}d ${Math.floor((minutes % 1440) / 60)}h`;
+  };
+
+  const getSessionLabel = (val: string | null | undefined) => {
+    if (!val) return "-";
+    return SESSIONS.find((s) => s.value === val)?.label || val;
+  };
+
+  const getMarketConditionLabel = (val: string | null | undefined) => {
+    if (!val) return "-";
+    return MARKET_CONDITIONS.find((m) => m.value === val)?.label || val;
   };
 
   return (
     <div className="space-y-6 pb-12">
-      {/* Header with condition filter */}
-      <div className="flex items-center justify-between mb-4 gap-4 flex-wrap">
+      {/* Header + Filter Toggle */}
+      <div className="flex items-center justify-between gap-4 flex-wrap">
         <h2 className="text-2xl font-bold tracking-tight">Trading Overview</h2>
-        <div className="flex gap-2 items-center">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/50" />
-            <Input
-              value={conditionFilter}
-              onChange={(e) => setConditionFilter(e.target.value)}
-              placeholder="Filter by market condition..."
-              className="pl-9 h-9 w-64 bg-card/30 border-border/40 text-sm"
-            />
-            {conditionFilter && matchedConditions.length > 0 && (
-              <div className="absolute right-2 top-1/2 -translate-y-1/2">
-                <Badge
-                  variant="outline"
-                  className="text-[10px] bg-blue-500/10 text-blue-500 border-blue-500/20"
+        <Button
+          variant={showFilters ? "default" : "outline"}
+          size="sm"
+          onClick={() => setShowFilters(!showFilters)}
+          className="gap-2"
+        >
+          <Filter className="h-3.5 w-3.5" />
+          Filters
+          {activeFilterCount > 0 && (
+            <Badge variant="secondary" className="ml-1 h-5 min-w-5 rounded-full text-[10px] px-1.5">
+              {activeFilterCount}
+            </Badge>
+          )}
+        </Button>
+      </div>
+
+      {/* Power Filters Panel */}
+      {showFilters && (
+        <Card className="bg-card/40 border-border/30">
+          <CardContent className="pt-5 pb-4">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3">
+              {/* Symbol */}
+              <div className="space-y-1">
+                <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Symbol</label>
+                <Input
+                  value={filters.symbol}
+                  onChange={(e) => setFilter("symbol", e.target.value)}
+                  placeholder="BTCUSDT..."
+                  className="h-8 text-xs"
+                />
+              </div>
+
+              {/* Setup */}
+              <div className="space-y-1">
+                <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Setup</label>
+                <select
+                  value={filters.setup}
+                  onChange={(e) => setFilter("setup", e.target.value)}
+                  className="flex h-8 w-full rounded-md border border-border bg-background px-2 text-xs"
                 >
-                  {matchedConditions.length} matched
-                </Badge>
+                  <option value="">All</option>
+                  {setups.map((s: any) => (
+                    <option key={s.id} value={s.id}>{s.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Market Condition */}
+              <div className="space-y-1">
+                <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Condition</label>
+                <select
+                  value={filters.marketCondition}
+                  onChange={(e) => setFilter("marketCondition", e.target.value)}
+                  className="flex h-8 w-full rounded-md border border-border bg-background px-2 text-xs"
+                >
+                  <option value="">All</option>
+                  {MARKET_CONDITIONS.map((m) => (
+                    <option key={m.value} value={m.value}>{m.label}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Session */}
+              <div className="space-y-1">
+                <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Session</label>
+                <select
+                  value={filters.session}
+                  onChange={(e) => setFilter("session", e.target.value)}
+                  className="flex h-8 w-full rounded-md border border-border bg-background px-2 text-xs"
+                >
+                  <option value="">All</option>
+                  {SESSIONS.map((s) => (
+                    <option key={s.value} value={s.value}>{s.label}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Side */}
+              <div className="space-y-1">
+                <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Side</label>
+                <select
+                  value={filters.side}
+                  onChange={(e) => setFilter("side", e.target.value)}
+                  className="flex h-8 w-full rounded-md border border-border bg-background px-2 text-xs"
+                >
+                  <option value="">All</option>
+                  <option value="long">Long</option>
+                  <option value="short">Short</option>
+                </select>
+              </div>
+
+              {/* Status */}
+              <div className="space-y-1">
+                <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Status</label>
+                <select
+                  value={filters.status}
+                  onChange={(e) => setFilter("status", e.target.value)}
+                  className="flex h-8 w-full rounded-md border border-border bg-background px-2 text-xs"
+                >
+                  <option value="">All</option>
+                  <option value="open">Open</option>
+                  <option value="closed">Closed</option>
+                </select>
+              </div>
+
+              {/* Entry Timeframe */}
+              <div className="space-y-1">
+                <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Timeframe</label>
+                <select
+                  value={filters.entryTimeframe}
+                  onChange={(e) => setFilter("entryTimeframe", e.target.value)}
+                  className="flex h-8 w-full rounded-md border border-border bg-background px-2 text-xs"
+                >
+                  <option value="">All</option>
+                  {TIMEFRAMES.map((tf) => (
+                    <option key={tf} value={tf}>{tf}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Confidence Range */}
+              <div className="space-y-1">
+                <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Confidence</label>
+                <div className="flex gap-1">
+                  <Input
+                    value={filters.minConfidence}
+                    onChange={(e) => setFilter("minConfidence", e.target.value)}
+                    placeholder="Min"
+                    type="number"
+                    min="1"
+                    max="10"
+                    className="h-8 text-xs w-1/2"
+                  />
+                  <Input
+                    value={filters.maxConfidence}
+                    onChange={(e) => setFilter("maxConfidence", e.target.value)}
+                    placeholder="Max"
+                    type="number"
+                    min="1"
+                    max="10"
+                    className="h-8 text-xs w-1/2"
+                  />
+                </div>
+              </div>
+
+              {/* Discipline Range */}
+              <div className="space-y-1">
+                <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Discipline</label>
+                <div className="flex gap-1">
+                  <Input
+                    value={filters.minDiscipline}
+                    onChange={(e) => setFilter("minDiscipline", e.target.value)}
+                    placeholder="Min"
+                    type="number"
+                    min="1"
+                    max="10"
+                    className="h-8 text-xs w-1/2"
+                  />
+                  <Input
+                    value={filters.maxDiscipline}
+                    onChange={(e) => setFilter("maxDiscipline", e.target.value)}
+                    placeholder="Max"
+                    type="number"
+                    min="1"
+                    max="10"
+                    className="h-8 text-xs w-1/2"
+                  />
+                </div>
+              </div>
+
+              {/* Holding Time Range (minutes) */}
+              <div className="space-y-1">
+                <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Hold (min)</label>
+                <div className="flex gap-1">
+                  <Input
+                    value={filters.minHoldingTime}
+                    onChange={(e) => setFilter("minHoldingTime", e.target.value)}
+                    placeholder="Min"
+                    type="number"
+                    className="h-8 text-xs w-1/2"
+                  />
+                  <Input
+                    value={filters.maxHoldingTime}
+                    onChange={(e) => setFilter("maxHoldingTime", e.target.value)}
+                    placeholder="Max"
+                    type="number"
+                    className="h-8 text-xs w-1/2"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {activeFilterCount > 0 && (
+              <div className="mt-3 flex items-center gap-2">
+                <Button variant="ghost" size="sm" onClick={clearFilters} className="h-7 text-xs gap-1.5 text-muted-foreground">
+                  <X className="h-3 w-3" />
+                  Clear all filters
+                </Button>
+                <span className="text-xs text-muted-foreground">
+                  Showing {sortedTrades.length} of {trades.length} trades
+                </span>
               </div>
             )}
-          </div>
-          {conditionFilter && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setConditionFilter("")}
-              className="h-9 text-xs text-muted-foreground"
-            >
-              Clear
-            </Button>
-          )}
-        </div>
-      </div>
-
-      {/* Top Stats Cards - 6 columns */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-        <Card className="bg-card/40 border-border/20 shadow-sm">
-          <CardHeader className="flex flex-row items-center justify-between pb-1 pt-4 px-4">
-            <CardTitle className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
-              Total Trades
-            </CardTitle>
-            <Target className="h-4 w-4 text-blue-500/70" />
-          </CardHeader>
-          <CardContent className="px-4 pb-4">
-            <p className="text-2xl font-bold text-blue-500">
-              {metrics.totalTrades}
-            </p>
-            <p className="text-[10px] text-muted-foreground mt-0.5">
-              {metrics.openTrades} open / {metrics.closedTrades} closed
-            </p>
           </CardContent>
         </Card>
-
-        <Card className="bg-card/40 border-border/20 shadow-sm">
-          <CardHeader className="flex flex-row items-center justify-between pb-1 pt-4 px-4">
-            <CardTitle className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
-              Win Rate
-            </CardTitle>
-            <Percent className="h-4 w-4 text-green-500/70" />
-          </CardHeader>
-          <CardContent className="px-4 pb-4">
-            <p className="text-2xl font-bold text-green-500">
-              {metrics.winRate.toFixed(1)}%
-            </p>
-            <p className="text-[10px] text-muted-foreground mt-0.5">
-              {metrics.wins}W / {metrics.losses}L
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-card/40 border-border/20 shadow-sm">
-          <CardHeader className="flex flex-row items-center justify-between pb-1 pt-4 px-4">
-            <CardTitle className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
-              Total PnL
-            </CardTitle>
-            <DollarSign
-              className={cn(
-                "h-4 w-4",
-                metrics.totalPnl >= 0 ? "text-green-500/70" : "text-red-500/70"
-              )}
-            />
-          </CardHeader>
-          <CardContent className="px-4 pb-4">
-            <p
-              className={cn("text-2xl font-bold", pnlColor(metrics.totalPnl))}
-            >
-              {formatMoney(metrics.totalPnl)}
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-card/40 border-border/20 shadow-sm">
-          <CardHeader className="flex flex-row items-center justify-between pb-1 pt-4 px-4">
-            <CardTitle className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
-              Risk / Reward
-            </CardTitle>
-            <Scale className="h-4 w-4 text-purple-500/70" />
-          </CardHeader>
-          <CardContent className="px-4 pb-4">
-            <p className="text-2xl font-bold text-purple-500">
-              {metrics.riskReward.toFixed(2)}x
-            </p>
-            <p className="text-[10px] text-muted-foreground mt-0.5">
-              PF: {metrics.profitFactor.toFixed(2)}
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-card/40 border-border/20 shadow-sm">
-          <CardHeader className="flex flex-row items-center justify-between pb-1 pt-4 px-4">
-            <CardTitle className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
-              Best Trade
-            </CardTitle>
-            <TrendingUp className="h-4 w-4 text-green-500/70" />
-          </CardHeader>
-          <CardContent className="px-4 pb-4">
-            <p className="text-2xl font-bold text-green-500">
-              {formatMoney(metrics.bestTrade)}
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-card/40 border-border/20 shadow-sm">
-          <CardHeader className="flex flex-row items-center justify-between pb-1 pt-4 px-4">
-            <CardTitle className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
-              Worst Trade
-            </CardTitle>
-            <TrendingDown className="h-4 w-4 text-red-500/70" />
-          </CardHeader>
-          <CardContent className="px-4 pb-4">
-            <p className="text-2xl font-bold text-red-500">
-              {formatMoney(metrics.worstTrade)}
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Best & Worst Market Conditions */}
-      {(conditionPerformance.bestCondition ||
-        conditionPerformance.worstCondition) && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {conditionPerformance.bestCondition && (
-            <Card className="bg-gradient-to-br from-green-500/5 to-emerald-500/5 border-green-500/20 shadow-sm">
-              <CardContent className="flex items-center gap-4 py-5 px-6">
-                <div className="h-12 w-12 rounded-2xl bg-green-500/10 flex items-center justify-center shrink-0">
-                  <Trophy className="h-6 w-6 text-green-500" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-[10px] font-semibold text-green-500/70 uppercase tracking-wider mb-0.5">
-                    Best Market Condition
-                  </p>
-                  <p className="text-lg font-bold text-foreground truncate">
-                    {conditionPerformance.bestCondition.name}
-                  </p>
-                  <div className="flex gap-4 mt-1">
-                    <span className="text-xs text-muted-foreground">
-                      PnL:{" "}
-                      <span className="text-green-500 font-semibold">
-                        {formatMoney(conditionPerformance.bestCondition.pnl)}
-                      </span>
-                    </span>
-                    <span className="text-xs text-muted-foreground">
-                      Win Rate:{" "}
-                      <span className="text-green-500 font-semibold">
-                        {conditionPerformance.bestCondition.winRate.toFixed(0)}%
-                      </span>
-                    </span>
-                    <span className="text-xs text-muted-foreground">
-                      Trades:{" "}
-                      <span className="font-semibold">
-                        {conditionPerformance.bestCondition.trades}
-                      </span>
-                    </span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {conditionPerformance.worstCondition &&
-            conditionPerformance.worstCondition.name !==
-              conditionPerformance.bestCondition?.name && (
-              <Card className="bg-gradient-to-br from-red-500/5 to-orange-500/5 border-red-500/20 shadow-sm">
-                <CardContent className="flex items-center gap-4 py-5 px-6">
-                  <div className="h-12 w-12 rounded-2xl bg-red-500/10 flex items-center justify-center shrink-0">
-                    <AlertTriangle className="h-6 w-6 text-red-500" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-[10px] font-semibold text-red-500/70 uppercase tracking-wider mb-0.5">
-                      Worst Market Condition
-                    </p>
-                    <p className="text-lg font-bold text-foreground truncate">
-                      {conditionPerformance.worstCondition.name}
-                    </p>
-                    <div className="flex gap-4 mt-1">
-                      <span className="text-xs text-muted-foreground">
-                        PnL:{" "}
-                        <span className="text-red-500 font-semibold">
-                          {formatMoney(
-                            conditionPerformance.worstCondition.pnl
-                          )}
-                        </span>
-                      </span>
-                      <span className="text-xs text-muted-foreground">
-                        Win Rate:{" "}
-                        <span className="text-red-500 font-semibold">
-                          {conditionPerformance.worstCondition.winRate.toFixed(
-                            0
-                          )}
-                          %
-                        </span>
-                      </span>
-                      <span className="text-xs text-muted-foreground">
-                        Trades:{" "}
-                        <span className="font-semibold">
-                          {conditionPerformance.worstCondition.trades}
-                        </span>
-                      </span>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-        </div>
       )}
 
-      {/* Summary Metrics Row */}
-      <Card className="bg-card/40 border-border/20 shadow-sm py-5">
-        <CardContent className="p-0 flex flex-wrap justify-between divide-x divide-border/20 px-8">
-          <div className="flex flex-col items-center justify-center flex-1 px-3">
-            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">
-              Avg Win
-            </span>
-            <span className="text-xl font-bold text-green-500">
-              {formatMoney(metrics.avgWin)}
-            </span>
-          </div>
-          <div className="flex flex-col items-center justify-center flex-1 px-3">
-            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">
-              Avg Loss
-            </span>
-            <span className="text-xl font-bold text-red-500">
-              {formatMoney(metrics.avgLoss)}
-            </span>
-          </div>
-          <div className="flex flex-col items-center justify-center flex-1 px-3">
-            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">
-              Win Streak
-            </span>
-            <span className="text-xl font-bold text-green-500">
-              {metrics.maxWinStreak}
-            </span>
-          </div>
-          <div className="flex flex-col items-center justify-center flex-1 px-3">
-            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">
-              Loss Streak
-            </span>
-            <span className="text-xl font-bold text-red-500">
-              {metrics.maxLossStreak}
-            </span>
-          </div>
-          <div className="flex flex-col items-center justify-center flex-1 px-3">
-            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">
-              Current
-            </span>
-            <span
-              className={cn(
-                "text-xl font-bold",
-                metrics.currentStreak > 0 ? "text-green-500" : "text-red-500"
-              )}
-            >
-              {metrics.currentStreak > 0 ? "+" : ""}
-              {metrics.currentStreak}
-            </span>
-          </div>
-          <div className="flex flex-col items-center justify-center flex-1 px-3">
-            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">
-              Profit Factor
-            </span>
-            <span className="text-xl font-bold text-blue-500">
-              {metrics.profitFactor.toFixed(2)}
-            </span>
-          </div>
-        </CardContent>
-      </Card>
+      {/* Top Stats — 8 cards */}
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3">
+        <Card className="bg-card/40 border-border/20 shadow-sm">
+          <CardContent className="p-3">
+            <p className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider">Trades</p>
+            <p className="text-xl font-bold text-blue-500 mt-1">{metrics.totalTrades}</p>
+            <p className="text-[9px] text-muted-foreground">{metrics.openTrades} open / {metrics.closedTrades} closed</p>
+          </CardContent>
+        </Card>
 
-      {/* Charts Grid */}
+        <Card className="bg-card/40 border-border/20 shadow-sm">
+          <CardContent className="p-3">
+            <p className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider">Win Rate</p>
+            <p className="text-xl font-bold text-green-500 mt-1">{metrics.winRate.toFixed(1)}%</p>
+            <p className="text-[9px] text-muted-foreground">{metrics.wins}W / {metrics.losses}L</p>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-card/40 border-border/20 shadow-sm">
+          <CardContent className="p-3">
+            <p className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider">Total PnL</p>
+            <p className={cn("text-xl font-bold mt-1", pnlColor(metrics.totalPnl))}>{formatMoney(metrics.totalPnl)}</p>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-card/40 border-border/20 shadow-sm">
+          <CardContent className="p-3">
+            <p className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider">Expectancy</p>
+            <p className={cn("text-xl font-bold mt-1", pnlColor(metrics.expectancy))}>{formatMoney(metrics.expectancy)}</p>
+            <p className="text-[9px] text-muted-foreground">per trade</p>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-card/40 border-border/20 shadow-sm">
+          <CardContent className="p-3">
+            <p className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider">Profit Factor</p>
+            <p className="text-xl font-bold text-purple-500 mt-1">{metrics.profitFactor.toFixed(2)}</p>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-card/40 border-border/20 shadow-sm">
+          <CardContent className="p-3">
+            <p className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider">Max Drawdown</p>
+            <p className="text-xl font-bold text-red-500 mt-1">-${metrics.maxDrawdown.toFixed(2)}</p>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-card/40 border-border/20 shadow-sm">
+          <CardContent className="p-3">
+            <p className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider">R:R Ratio</p>
+            <p className="text-xl font-bold text-purple-500 mt-1">{metrics.riskReward.toFixed(2)}x</p>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-card/40 border-border/20 shadow-sm">
+          <CardContent className="p-3">
+            <p className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider">Streak</p>
+            <p className={cn("text-xl font-bold mt-1", metrics.currentStreak >= 0 ? "text-green-500" : "text-red-500")}>
+              {metrics.currentStreak > 0 ? `+${metrics.currentStreak}` : metrics.currentStreak}
+            </p>
+            <p className="text-[9px] text-muted-foreground">max W{metrics.maxWinStreak} / L{metrics.maxLossStreak}</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Charts Row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Cumulative PnL */}
-        <Card className="bg-card/40 border-border/20 shadow-sm lg:col-span-1">
-          <CardHeader className="pb-2 pt-5 px-5">
-            <CardTitle className="text-base font-medium">
+        <Card className="bg-card/40 border-border/20 shadow-sm">
+          <CardHeader className="pb-2 pt-4 px-4">
+            <CardTitle className="text-sm font-semibold flex items-center gap-2">
+              <TrendingUp className="h-4 w-4 text-blue-500" />
               Cumulative PnL
             </CardTitle>
           </CardHeader>
-          <CardContent className="px-2 pb-5 pt-0 h-[280px]">
-            {chartsData.cumulative.length > 0 ? (
-              <ChartContainer
-                config={{ pnl: { label: "PnL", color: "#10b981" } }}
-                className="h-full w-full"
-              >
-                <LineChart
-                  data={chartsData.cumulative}
-                  margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
-                >
-                  <CartesianGrid
-                    strokeDasharray="3 3"
-                    vertical={false}
-                    stroke="hsl(var(--border)/0.3)"
-                  />
-                  <XAxis
-                    dataKey="date"
-                    tickLine={false}
-                    axisLine={false}
-                    tickMargin={8}
-                    tick={{ fontSize: 12 }}
-                  />
-                  <YAxis
-                    tickLine={false}
-                    axisLine={false}
-                    tickMargin={8}
-                    tick={{ fontSize: 12 }}
-                    tickFormatter={(val) => `$${val}`}
-                  />
+          <CardContent className="px-2 pb-3">
+            {chartsData.cumulative.length > 1 ? (
+              <ChartContainer config={{ pnl: { label: "PnL", color: "hsl(var(--chart-1))" } }} className="h-48 w-full">
+                <LineChart data={chartsData.cumulative}>
+                  <CartesianGrid strokeDasharray="3 3" className="stroke-border/30" />
+                  <XAxis dataKey="date" tick={{ fontSize: 10 }} />
+                  <YAxis tick={{ fontSize: 10 }} />
                   <ChartTooltip content={<ChartTooltipContent />} />
-                  <Line
-                    type="stepAfter"
-                    dataKey="pnl"
-                    stroke={
-                      chartsData.cumulative[chartsData.cumulative.length - 1]
-                        ?.pnl >= 0
-                        ? "#10b981"
-                        : "#ef4444"
-                    }
-                    strokeWidth={2}
-                    dot={{ r: 3, strokeWidth: 2 }}
-                    activeDot={{ r: 5 }}
-                  />
+                  <Line type="monotone" dataKey="pnl" stroke="var(--color-pnl)" strokeWidth={2} dot={false} />
                 </LineChart>
               </ChartContainer>
             ) : (
-              <div className="h-full flex items-center justify-center text-sm text-muted-foreground">
-                No data available
-              </div>
+              <div className="h-48 flex items-center justify-center text-xs text-muted-foreground">Need at least 2 closed trades</div>
             )}
           </CardContent>
         </Card>
 
-        {/* Win Rate Chart */}
-        <Card className="bg-card/40 border-border/20 shadow-sm lg:col-span-1">
-          <CardHeader className="pb-2 pt-5 px-5">
-            <CardTitle className="text-base font-medium">
+        {/* Win Rate Over Time */}
+        <Card className="bg-card/40 border-border/20 shadow-sm">
+          <CardHeader className="pb-2 pt-4 px-4">
+            <CardTitle className="text-sm font-semibold flex items-center gap-2">
+              <Percent className="h-4 w-4 text-green-500" />
               Win Rate Over Time
             </CardTitle>
           </CardHeader>
-          <CardContent className="px-2 pb-5 pt-0 h-[280px]">
-            {chartsData.winRateData.length > 0 ? (
-              <ChartContainer
-                config={{
-                  winRate: { label: "Win Rate", color: "#10b981" },
-                }}
-                className="h-full w-full"
-              >
-                <LineChart
-                  data={chartsData.winRateData}
-                  margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
-                >
-                  <CartesianGrid
-                    strokeDasharray="3 3"
-                    vertical={false}
-                    stroke="hsl(var(--border)/0.3)"
-                  />
-                  <XAxis
-                    dataKey="date"
-                    tickLine={false}
-                    axisLine={false}
-                    tickMargin={8}
-                    tick={{ fontSize: 12 }}
-                  />
-                  <YAxis
-                    domain={[0, 100]}
-                    tickLine={false}
-                    axisLine={false}
-                    tickMargin={8}
-                    tick={{ fontSize: 12 }}
-                    tickFormatter={(val) => `${val}%`}
-                  />
+          <CardContent className="px-2 pb-3">
+            {chartsData.winRateData.length > 1 ? (
+              <ChartContainer config={{ winRate: { label: "Win Rate %", color: "hsl(var(--chart-2))" } }} className="h-48 w-full">
+                <LineChart data={chartsData.winRateData}>
+                  <CartesianGrid strokeDasharray="3 3" className="stroke-border/30" />
+                  <XAxis dataKey="date" tick={{ fontSize: 10 }} />
+                  <YAxis domain={[0, 100]} tick={{ fontSize: 10 }} />
                   <ChartTooltip content={<ChartTooltipContent />} />
-                  <Line
-                    type="monotone"
-                    dataKey="winRate"
-                    stroke="#10b981"
-                    strokeWidth={2}
-                    dot={{ r: 3, fill: "#10b981", strokeWidth: 0 }}
-                    activeDot={{ r: 5 }}
-                  />
+                  <Line type="monotone" dataKey="winRate" stroke="var(--color-winRate)" strokeWidth={2} dot={false} />
                 </LineChart>
               </ChartContainer>
             ) : (
-              <div className="h-full flex items-center justify-center text-sm text-muted-foreground">
-                No data available
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Condition Performance */}
-        <Card className="bg-card/40 border-border/20 shadow-sm lg:col-span-1">
-          <CardHeader className="pb-2 pt-5 px-5">
-            <div className="flex items-center gap-2">
-              <Zap className="h-4 w-4 text-blue-500" />
-              <CardTitle className="text-base font-medium">
-                Performance by Market Condition
-              </CardTitle>
-            </div>
-          </CardHeader>
-          <CardContent className="px-2 pb-5 pt-0 h-[280px]">
-            {chartsData.conditionsData.length > 0 ? (
-              <ChartContainer
-                config={{ pnl: { label: "PnL", color: "#10b981" } }}
-                className="h-full w-full"
-              >
-                <BarChart
-                  data={chartsData.conditionsData}
-                  layout="vertical"
-                  margin={{ top: 10, right: 10, left: 30, bottom: 0 }}
-                >
-                  <CartesianGrid
-                    strokeDasharray="3 3"
-                    horizontal={false}
-                    stroke="hsl(var(--border)/0.3)"
-                  />
-                  <XAxis
-                    type="number"
-                    tickLine={false}
-                    axisLine={false}
-                    tickMargin={8}
-                    tick={{ fontSize: 12 }}
-                    tickFormatter={(val) => `$${val}`}
-                  />
-                  <YAxis
-                    dataKey="name"
-                    type="category"
-                    tickLine={false}
-                    axisLine={false}
-                    tickMargin={8}
-                    tick={{ fontSize: 11 }}
-                    width={120}
-                  />
-                  <ChartTooltip content={<ChartTooltipContent />} />
-                  <Bar dataKey="pnl" radius={[0, 2, 2, 0]} barSize={24}>
-                    {chartsData.conditionsData.map((entry, index) => (
-                      <Cell
-                        key={`cell-${index}`}
-                        fill={entry.pnl >= 0 ? "#10b981" : "#ef4444"}
-                      />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ChartContainer>
-            ) : (
-              <div className="h-full flex items-center justify-center text-sm text-muted-foreground">
-                No condition data yet
-              </div>
+              <div className="h-48 flex items-center justify-center text-xs text-muted-foreground">Need at least 2 closed trades</div>
             )}
           </CardContent>
         </Card>
 
         {/* Setup Performance */}
-        <Card className="bg-card/40 border-border/20 shadow-sm lg:col-span-1">
-          <CardHeader className="pb-2 pt-5 px-5">
-            <CardTitle className="text-base font-medium">
+        <Card className="bg-card/40 border-border/20 shadow-sm">
+          <CardHeader className="pb-2 pt-4 px-4">
+            <CardTitle className="text-sm font-semibold flex items-center gap-2">
+              <Zap className="h-4 w-4 text-amber-500" />
               Performance by Setup
             </CardTitle>
           </CardHeader>
-          <CardContent className="px-2 pb-5 pt-0 h-[280px]">
+          <CardContent className="px-2 pb-3">
             {chartsData.setupsData.length > 0 ? (
-              <ChartContainer
-                config={{ pnl: { label: "PnL", color: "#10b981" } }}
-                className="h-full w-full"
-              >
-                <BarChart
-                  data={chartsData.setupsData}
-                  layout="vertical"
-                  margin={{ top: 10, right: 10, left: 30, bottom: 0 }}
-                >
-                  <CartesianGrid
-                    strokeDasharray="3 3"
-                    horizontal={false}
-                    stroke="hsl(var(--border)/0.3)"
-                  />
-                  <XAxis
-                    type="number"
-                    tickLine={false}
-                    axisLine={false}
-                    tickMargin={8}
-                    tick={{ fontSize: 12 }}
-                    tickFormatter={(val) => `$${val}`}
-                  />
-                  <YAxis
-                    dataKey="name"
-                    type="category"
-                    tickLine={false}
-                    axisLine={false}
-                    tickMargin={8}
-                    tick={{ fontSize: 12 }}
-                  />
+              <ChartContainer config={{ pnl: { label: "PnL", color: "hsl(var(--chart-3))" } }} className="h-48 w-full">
+                <BarChart data={chartsData.setupsData}>
+                  <CartesianGrid strokeDasharray="3 3" className="stroke-border/30" />
+                  <XAxis dataKey="name" tick={{ fontSize: 9 }} />
+                  <YAxis tick={{ fontSize: 10 }} />
                   <ChartTooltip content={<ChartTooltipContent />} />
-                  <Bar dataKey="pnl" radius={[0, 2, 2, 0]} barSize={24}>
-                    {chartsData.setupsData.map((entry, index) => (
-                      <Cell
-                        key={`cell-${index}`}
-                        fill={entry.pnl >= 0 ? "#10b981" : "#ef4444"}
-                      />
+                  <Bar dataKey="pnl" radius={[4, 4, 0, 0]}>
+                    {chartsData.setupsData.map((entry, i) => (
+                      <Cell key={i} fill={entry.pnl >= 0 ? "hsl(142, 76%, 36%)" : "hsl(0, 84%, 60%)"} />
                     ))}
                   </Bar>
                 </BarChart>
               </ChartContainer>
             ) : (
-              <div className="h-full flex items-center justify-center text-sm text-muted-foreground">
-                No data available
-              </div>
+              <div className="h-48 flex items-center justify-center text-xs text-muted-foreground">No setup data yet</div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Session Performance */}
+        <Card className="bg-card/40 border-border/20 shadow-sm">
+          <CardHeader className="pb-2 pt-4 px-4">
+            <CardTitle className="text-sm font-semibold flex items-center gap-2">
+              <Clock className="h-4 w-4 text-indigo-500" />
+              Performance by Session
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="px-2 pb-3">
+            {chartsData.sessionData.length > 0 ? (
+              <ChartContainer config={{ pnl: { label: "PnL", color: "hsl(var(--chart-4))" } }} className="h-48 w-full">
+                <BarChart data={chartsData.sessionData}>
+                  <CartesianGrid strokeDasharray="3 3" className="stroke-border/30" />
+                  <XAxis dataKey="name" tick={{ fontSize: 9 }} />
+                  <YAxis tick={{ fontSize: 10 }} />
+                  <ChartTooltip content={<ChartTooltipContent />} />
+                  <Bar dataKey="pnl" radius={[4, 4, 0, 0]}>
+                    {chartsData.sessionData.map((entry, i) => (
+                      <Cell key={i} fill={entry.pnl >= 0 ? "hsl(142, 76%, 36%)" : "hsl(0, 84%, 60%)"} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ChartContainer>
+            ) : (
+              <div className="h-48 flex items-center justify-center text-xs text-muted-foreground">No session data yet</div>
             )}
           </CardContent>
         </Card>
       </div>
 
-      {/* Positions Table */}
+      {/* Trades Table */}
       <Card className="bg-card/40 border-border/20 shadow-sm">
-        <CardHeader className="pb-4 pt-6 px-8">
-          <CardTitle className="text-base font-medium">Positions</CardTitle>
+        <CardHeader className="pb-2 pt-4 px-4">
+          <CardTitle className="text-sm font-semibold flex items-center gap-2">
+            <Activity className="h-4 w-4 text-blue-500" />
+            Trades ({sortedTrades.length})
+          </CardTitle>
         </CardHeader>
-        <CardContent className="px-8 pb-8 pt-0">
-          <div className="overflow-x-auto rounded-md">
-            <table className="w-full text-sm">
+        <CardContent className="p-0">
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs">
               <thead>
-                <tr className="border-b border-border/20 text-left">
-                  <th className="pb-4 font-medium text-muted-foreground/70">
-                    Symbol
-                  </th>
-                  <th className="pb-4 font-medium text-muted-foreground/70">
-                    Conditions
-                  </th>
-                  <th className="pb-4 font-medium text-muted-foreground/70">
-                    Side
-                  </th>
-                  <th className="pb-4 font-medium text-muted-foreground/70">
-                    Status
-                  </th>
-                  <th className="pb-4 font-medium text-muted-foreground/70">
-                    Entry
-                  </th>
-                  <th className="pb-4 font-medium text-muted-foreground/70">
-                    Exit
-                  </th>
-                  <th className="pb-4 font-medium text-muted-foreground/70">
-                    PnL
-                  </th>
-                  <th className="pb-4 font-medium text-muted-foreground/70">
-                    Confidence
-                  </th>
+                <tr className="border-b border-border/30">
+                  <th className="px-3 py-2.5 text-left font-semibold text-muted-foreground w-8"></th>
+                  <th className="px-3 py-2.5 text-left font-semibold text-muted-foreground">Symbol</th>
+                  <th className="px-3 py-2.5 text-left font-semibold text-muted-foreground">Side</th>
+                  <th className="px-3 py-2.5 text-left font-semibold text-muted-foreground">Status</th>
+                  <th className="px-3 py-2.5 text-right font-semibold text-muted-foreground">Entry</th>
+                  <th className="px-3 py-2.5 text-right font-semibold text-muted-foreground">Exit</th>
+                  <th className="px-3 py-2.5 text-right font-semibold text-muted-foreground">PnL</th>
+                  <th className="px-3 py-2.5 text-center font-semibold text-muted-foreground w-20">Journal</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-border/10">
-                {trades.length === 0 ? (
+              <tbody>
+                {sortedTrades.length === 0 ? (
                   <tr>
-                    <td
-                      colSpan={8}
-                      className="py-8 text-center text-muted-foreground text-sm"
-                    >
-                      No positions found. Connect an exchange or wait for trades
-                      to sync.
+                    <td colSpan={8} className="px-3 py-8 text-center text-muted-foreground">
+                      No trades found{activeFilterCount > 0 ? " matching your filters" : ""}. Sync from your exchange to get started.
                     </td>
                   </tr>
                 ) : (
-                  trades.map((trade) => {
-                    const isExpanded = expandedRows.has(trade.id);
-
-                    return (
-                      <React.Fragment key={trade.id}>
-                        <tr
-                          onClick={() => toggleRow(trade.id)}
-                          className="group hover:bg-muted/10 transition-colors cursor-pointer"
-                        >
-                          <td className="py-4 font-medium text-sm">
-                            <div className="flex items-center gap-2">
-                              <span className="text-muted-foreground opacity-70">
-                                {isExpanded ? (
-                                  <ChevronDown className="h-4 w-4" />
-                                ) : (
-                                  <ChevronRight className="h-4 w-4" />
-                                )}
-                              </span>
-                              {trade.symbol}
-                            </div>
-                            {trade.setup && (
-                              <div className="pl-6 mt-1.5">
-                                <Badge
-                                  variant="outline"
-                                  style={{
-                                    borderColor: trade.setup.color
-                                      ? `${trade.setup.color}40`
-                                      : undefined,
-                                    color: trade.setup.color,
-                                  }}
-                                  className="text-[9px] px-1.5 py-0 h-4 uppercase tracking-wider bg-transparent"
-                                >
-                                  {trade.setup.name}
-                                </Badge>
-                              </div>
-                            )}
-                          </td>
-                          <td className="py-4">
-                            <div className="flex flex-wrap gap-1 max-w-[180px]">
-                              {trade.conditions?.length > 0 ? (
-                                trade.conditions
-                                  .slice(0, 3)
-                                  .map((c: any) => (
-                                    <Badge
-                                      key={c.id}
-                                      variant="outline"
-                                      className="text-[9px] bg-blue-500/5 text-blue-500/80 border-blue-500/20 rounded px-1.5 py-0 h-4"
-                                    >
-                                      {c.name}
-                                    </Badge>
-                                  ))
-                              ) : (
-                                <span className="text-muted-foreground/40 text-xs">
-                                  -
-                                </span>
-                              )}
-                              {trade.conditions?.length > 3 && (
-                                <Badge
-                                  variant="outline"
-                                  className="text-[9px] bg-muted/30 text-muted-foreground border-border/40 rounded px-1.5 py-0 h-4"
-                                >
-                                  +{trade.conditions.length - 3}
-                                </Badge>
-                              )}
-                            </div>
-                          </td>
-                          <td className="py-4">
-                            <Badge
-                              variant="outline"
-                              className={cn(
-                                "text-[10px] uppercase tracking-wider rounded px-2 font-semibold",
-                                trade.side === "long"
-                                  ? "bg-green-500/10 text-green-500 border-green-500/20"
-                                  : "bg-red-500/10 text-red-500 border-red-500/20"
-                              )}
-                            >
-                              {trade.side}
-                            </Badge>
-                          </td>
-                          <td className="py-4">
-                            <Badge
-                              variant="outline"
-                              className={cn(
-                                "text-[10px] uppercase tracking-wider rounded px-2 font-semibold",
-                                trade.status === "open"
-                                  ? "bg-blue-500/10 text-blue-500 border-blue-500/20"
-                                  : trade.status === "closed"
-                                  ? "bg-muted/30 text-muted-foreground border-border/40"
-                                  : "bg-yellow-500/10 text-yellow-500 border-yellow-500/20"
-                              )}
-                            >
-                              {trade.status}
-                            </Badge>
-                          </td>
-                          <td className="py-4 text-sm font-mono">
-                            ${trade.entryPrice}
-                          </td>
-                          <td className="py-4 text-sm font-mono">
-                            {trade.exitPrice ? `$${trade.exitPrice}` : "-"}
-                          </td>
-                          <td
-                            className={cn(
-                              "py-4 text-sm font-bold",
-                              pnlColor(trade.pnl || 0)
-                            )}
-                          >
-                            {trade.pnl ? formatMoney(trade.pnl) : "-"}
-                          </td>
-                          <td className="py-4 text-sm">
-                            {trade.confidenceLevel ||
-                            trade.notes ||
-                            trade.setupReason ? (
-                              <Badge
-                                variant="outline"
-                                className={cn(
-                                  "text-[10px] rounded px-2 font-semibold",
-                                  getConfidenceColor(trade.confidenceLevel)
-                                )}
-                              >
-                                {trade.confidenceLevel || 6}/10
+                  sortedTrades.map((t: any) => (
+                    <React.Fragment key={t.id}>
+                      <tr
+                        className={cn(
+                          "border-b border-border/20 hover:bg-muted/30 cursor-pointer transition-colors",
+                          t.isNew && "bg-blue-500/5 border-l-2 border-l-blue-500"
+                        )}
+                        onClick={() => toggleRow(t.id)}
+                      >
+                        <td className="px-3 py-2.5">
+                          {expandedRows.has(t.id) ? (
+                            <ChevronDown className="h-3 w-3 text-muted-foreground" />
+                          ) : (
+                            <ChevronRight className="h-3 w-3 text-muted-foreground" />
+                          )}
+                        </td>
+                        <td className="px-3 py-2.5 font-medium">
+                          <div className="flex items-center gap-2">
+                            {t.symbol}
+                            <span className="text-[10px] text-muted-foreground">
+                              {new Date(t.entryDate).toLocaleDateString(undefined, { month: "short", day: "numeric" })}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="px-3 py-2.5">
+                          <Badge variant="outline" className={cn("text-[10px]", t.side === "long" ? "text-green-500 border-green-500/30" : "text-red-500 border-red-500/30")}>
+                            {t.side?.toUpperCase()}
+                          </Badge>
+                        </td>
+                        <td className="px-3 py-2.5">
+                          <Badge variant="outline" className={cn("text-[10px]", t.status === "open" ? "text-blue-500 border-blue-500/30" : "text-muted-foreground")}>
+                            {t.status}
+                          </Badge>
+                        </td>
+                        <td className="px-3 py-2.5 text-right font-mono">${t.entryPrice.toFixed(2)}</td>
+                        <td className="px-3 py-2.5 text-right font-mono">{t.exitPrice ? `$${t.exitPrice.toFixed(2)}` : "-"}</td>
+                        <td className={cn("px-3 py-2.5 text-right font-mono font-semibold", pnlColor(t.pnl))}>{t.pnl ? formatMoney(t.pnl) : "-"}</td>
+                        <td className="px-3 py-2.5 text-center" onClick={(e) => e.stopPropagation()}>
+                          <TradeJournalDialog trade={t} setups={setups}>
+                            {t.needsJournal || t.isNew ? (
+                              <Badge variant="outline" className="text-[10px] border-amber-500/40 text-amber-500 cursor-pointer hover:bg-amber-500/10 gap-1">
+                                <BookOpen className="h-3 w-3" />
+                                Add
                               </Badge>
                             ) : (
-                              <span className="text-muted-foreground/60 text-xs">
-                                Empty
-                              </span>
+                              <Badge variant="outline" className="text-[10px] border-border/50 text-muted-foreground cursor-pointer hover:bg-muted/40 gap-1">
+                                <Pencil className="h-3 w-3" />
+                                Edit
+                              </Badge>
                             )}
-                          </td>
-                        </tr>
+                          </TradeJournalDialog>
+                        </td>
+                      </tr>
 
-                        {/* Expanded details row */}
-                        {isExpanded && (
-                          <tr className="bg-muted/5 border-b border-border/20">
-                            <td
-                              colSpan={8}
-                              className="py-6 px-10 border-l-2 border-l-blue-500/50"
-                            >
-                              <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                                <div className="space-y-6">
-                                  <div>
-                                    <p className="text-[11px] uppercase text-muted-foreground tracking-wider mb-1.5 font-semibold">
-                                      Setup
-                                    </p>
-                                    <p className="text-sm font-medium">
-                                      {trade.setup ? trade.setup.name : "-"}
-                                    </p>
-                                  </div>
-                                  <div>
-                                    <p className="text-[11px] uppercase text-muted-foreground tracking-wider mb-1.5 font-semibold">
-                                      Setup Reason
-                                    </p>
-                                    <p className="text-sm font-medium">
-                                      {trade.setupReason || "-"}
-                                    </p>
-                                  </div>
-                                  <div>
-                                    <p className="text-[11px] uppercase text-muted-foreground tracking-wider mb-1.5 font-semibold">
-                                      Market Conditions
-                                    </p>
-                                    <div className="flex flex-wrap gap-1.5">
-                                      {trade.conditions?.length > 0 ? (
-                                        trade.conditions.map((c: any) => (
-                                          <Badge
-                                            key={c.id}
-                                            variant="outline"
-                                            className="text-[10px] bg-blue-500/10 text-blue-500 border-blue-500/20"
-                                          >
-                                            {c.name}
-                                          </Badge>
-                                        ))
-                                      ) : (
-                                        <span className="text-sm text-muted-foreground">
-                                          -
-                                        </span>
-                                      )}
-                                    </div>
-                                  </div>
-                                </div>
+                      {/* Expanded row */}
+                      {expandedRows.has(t.id) && (
+                        <tr className="bg-muted/20">
+                          <td colSpan={8} className="px-6 py-4">
+                            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4 text-xs">
+                              {/* Moved from main row */}
+                              <div>
+                                <p className="text-muted-foreground font-medium mb-1">Condition</p>
+                                <p>{getMarketConditionLabel(t.marketCondition)}</p>
+                              </div>
+                              <div>
+                                <p className="text-muted-foreground font-medium mb-1">Session</p>
+                                <p>{getSessionLabel(t.session)}</p>
+                              </div>
+                              <div>
+                                <p className="text-muted-foreground font-medium mb-1">R:R</p>
+                                <p>{t.riskRewardRatio ? `${t.riskRewardRatio.toFixed(1)}` : "-"}</p>
+                              </div>
+                              <div>
+                                <p className="text-muted-foreground font-medium mb-1">Confidence</p>
+                                <p>{t.confidenceLevel ? `${t.confidenceLevel}/10` : "-"}</p>
+                              </div>
+                              <div>
+                                <p className="text-muted-foreground font-medium mb-1">Discipline</p>
+                                <p>{t.disciplineLevel ? `${t.disciplineLevel}/10` : "-"}</p>
+                              </div>
+                              <div>
+                                <p className="text-muted-foreground font-medium mb-1">Holding Time</p>
+                                <p>{formatHoldingTime(t.holdingTime)}</p>
+                              </div>
+                              <div>
+                                <p className="text-muted-foreground font-medium mb-1">Date</p>
+                                <p>{new Date(t.entryDate).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "2-digit" })}</p>
+                              </div>
+                            </div>
 
-                                <div className="space-y-6">
-                                  <div>
-                                    <p className="text-[11px] uppercase text-muted-foreground tracking-wider mb-1.5 font-semibold">
-                                      Psychology
-                                    </p>
-                                    <p className="text-sm font-medium">
-                                      {trade.psychology || "-"}
-                                    </p>
-                                  </div>
-                                  <div>
-                                    <p className="text-[11px] uppercase text-muted-foreground tracking-wider mb-1.5 font-semibold">
-                                      Confidence Level
-                                    </p>
-                                    <div className="flex items-center gap-2">
-                                      <div className="flex gap-1.5">
-                                        {Array.from({ length: 10 }).map(
-                                          (_, i) => (
-                                            <div
-                                              key={i}
-                                              className={cn(
-                                                "h-2 w-2 rounded-full",
-                                                i <
-                                                  (trade.confidenceLevel || 0)
-                                                  ? "bg-green-500"
-                                                  : "bg-muted-foreground/20"
-                                              )}
-                                            />
-                                          )
-                                        )}
-                                      </div>
-                                      <span className="text-sm text-muted-foreground">
-                                        {trade.confidenceLevel || 0}/10
-                                      </span>
-                                    </div>
-                                  </div>
-                                </div>
-
-                                <div className="space-y-6">
-                                  <div>
-                                    <p className="text-[11px] uppercase text-muted-foreground tracking-wider mb-1.5 font-semibold">
-                                      Notes
-                                    </p>
-                                    <p className="text-sm text-muted-foreground">
-                                      {trade.notes || "No notes available."}
-                                    </p>
-                                  </div>
-                                  <div className="pt-4 flex items-center gap-3">
-                                    <Button
-                                      size="sm"
-                                      variant="outline"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        onOpenChat && onOpenChat(trade);
-                                      }}
-                                      className="gap-2 h-8 text-xs bg-emerald-500/10 text-emerald-500 border-emerald-500/20 hover:bg-emerald-500/20"
-                                    >
-                                      <Edit className="h-3.5 w-3.5" />
-                                      {trade.confidenceLevel
-                                        ? "AI Journal Entry"
-                                        : "Ask AI to Journal"}
-                                    </Button>
-
-                                    {trade.status === "closed" && (
-                                      <Button
-                                        size="sm"
-                                        variant="outline"
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          onOpenChat && onOpenChat(trade);
-                                        }}
-                                        className="gap-2 h-8 text-xs bg-purple-500/10 text-purple-500 border-purple-500/20 hover:bg-purple-500/20"
-                                      >
-                                        <CheckSquare className="h-3.5 w-3.5" />
-                                        {trade.exitReason
-                                          ? "AI Journal Exit"
-                                          : "Ask AI to Close"}
-                                      </Button>
-                                    )}
-                                  </div>
+                            {/* Second row: existing expanded data */}
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs mt-4 pt-4 border-t border-border/20">
+                              <div>
+                                <p className="text-muted-foreground font-medium mb-1">Setups</p>
+                                <div className="flex flex-wrap gap-1">
+                                  {t.setups?.length > 0
+                                    ? t.setups.map((s: any) => (
+                                        <Badge key={s.id} variant="outline" className="text-[10px]" style={{ borderColor: s.color }}>
+                                          {s.name}
+                                        </Badge>
+                                      ))
+                                    : <span className="text-muted-foreground">None</span>
+                                  }
                                 </div>
                               </div>
-
-                              {trade.status === "closed" && (
-                                <div className="mt-6 pt-6 border-t border-border/40 border-dashed">
-                                  <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-                                    <div>
-                                      <p className="text-[11px] uppercase text-muted-foreground tracking-wider mb-1.5 font-semibold">
-                                        Exit Reason
-                                      </p>
-                                      <p className="text-sm font-medium">
-                                        {trade.exitReason || "-"}
-                                      </p>
-                                    </div>
-                                    <div>
-                                      <p className="text-[11px] uppercase text-muted-foreground tracking-wider mb-1.5 font-semibold">
-                                        Exit Emotion
-                                      </p>
-                                      <p className="text-sm font-medium">
-                                        {trade.exitPsychology || "-"}
-                                      </p>
-                                    </div>
-                                    <div>
-                                      <p className="text-[11px] uppercase text-muted-foreground tracking-wider mb-1.5 font-semibold">
-                                        Mistakes
-                                      </p>
-                                      <p className="text-sm text-muted-foreground">
-                                        {trade.mistakes || "-"}
-                                      </p>
-                                    </div>
-                                    <div>
-                                      <p className="text-[11px] uppercase text-muted-foreground tracking-wider mb-1.5 font-semibold">
-                                        Lessons
-                                      </p>
-                                      <p className="text-sm text-muted-foreground">
-                                        {trade.lessons || "-"}
-                                      </p>
-                                    </div>
-                                  </div>
+                              <div>
+                                <p className="text-muted-foreground font-medium mb-1">Timeframe</p>
+                                <p>{t.entryTimeframe || "-"}</p>
+                              </div>
+                              <div>
+                                <p className="text-muted-foreground font-medium mb-1">MAE / MFE</p>
+                                <p>
+                                  {t.mae !== null ? <span className="text-red-500">${t.mae.toFixed(2)}</span> : "-"}
+                                  {" / "}
+                                  {t.mfe !== null ? <span className="text-green-500">${t.mfe.toFixed(2)}</span> : "-"}
+                                </p>
+                              </div>
+                              {t.exitReason && (
+                                <div className="col-span-2">
+                                  <p className="text-muted-foreground font-medium mb-1">Exit Reason</p>
+                                  <p className="text-foreground">{t.exitReason}</p>
                                 </div>
                               )}
-                            </td>
-                          </tr>
-                        )}
-                      </React.Fragment>
-                    );
-                  })
+                              {t.lessons && (
+                                <div className="col-span-2">
+                                  <p className="text-muted-foreground font-medium mb-1">Lessons</p>
+                                  <p className="text-foreground">{t.lessons}</p>
+                                </div>
+                              )}
+                              {t.notes && (
+                                <div className="col-span-2">
+                                  <p className="text-muted-foreground font-medium mb-1">Notes</p>
+                                  <p className="text-foreground">{t.notes}</p>
+                                </div>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </React.Fragment>
+                  ))
                 )}
               </tbody>
             </table>
           </div>
-          <div className="mt-5 pt-5 border-t border-border/10 flex items-center justify-between text-xs text-muted-foreground">
-            <span>
-              Showing {Math.min(trades.length, trades.length)} of{" "}
-              {trades.length} positions
-            </span>
-          </div>
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+// ─── Trade Journal Dialog ────────────────────────────────────────────────────
+
+function TradeJournalDialog({
+  trade,
+  setups,
+  children,
+}: {
+  trade: any;
+  setups: any[];
+  children: React.ReactNode;
+}) {
+  const [open, setOpen] = useState(false);
+  const [isPending, startTransition] = useTransition();
+
+  // ── Setup multi-select state ──
+  const [selectedSetupIds, setSelectedSetupIds] = useState<string[]>(
+    () => trade.setups?.map((s: any) => s.id) || []
+  );
+  const [newSetupNames, setNewSetupNames] = useState<string[]>([]);
+  const [setupDropdownOpen, setSetupDropdownOpen] = useState(false);
+  const [setupSearch, setSetupSearch] = useState("");
+  const setupDropdownRef = useRef<HTMLDivElement>(null);
+  const setupInputRef = useRef<HTMLInputElement>(null);
+
+  // ── Other form state ──
+  const [marketCondition, setMarketCondition] = useState(trade.marketCondition || "");
+  const [session, setSession] = useState(trade.session || "");
+  const [entryTimeframe, setEntryTimeframe] = useState(trade.entryTimeframe || "");
+  const [riskRewardRatio, setRiskRewardRatio] = useState(
+    trade.riskRewardRatio != null ? String(trade.riskRewardRatio) : ""
+  );
+  const [confidenceLevel, setConfidenceLevel] = useState(
+    trade.confidenceLevel != null ? trade.confidenceLevel : 5
+  );
+  const [disciplineLevel, setDisciplineLevel] = useState(
+    trade.disciplineLevel != null ? trade.disciplineLevel : 5
+  );
+  const [exitReason, setExitReason] = useState(trade.exitReason || "");
+  const [lessons, setLessons] = useState(trade.lessons || "");
+  const [notes, setNotes] = useState(trade.notes || "");
+  const [mae, setMae] = useState(trade.mae != null ? String(trade.mae) : "");
+  const [mfe, setMfe] = useState(trade.mfe != null ? String(trade.mfe) : "");
+
+  // Auto-computed holding time (display only)
+  const holdingTimeDisplay = useMemo(() => {
+    if (trade.holdingTime) {
+      const m = trade.holdingTime;
+      if (m < 60) return `${m}m`;
+      if (m < 1440) return `${Math.floor(m / 60)}h ${m % 60}m`;
+      return `${Math.floor(m / 1440)}d ${Math.floor((m % 1440) / 60)}h`;
+    }
+    if (trade.entryDate && trade.exitDate) {
+      const mins = Math.round(
+        (new Date(trade.exitDate).getTime() - new Date(trade.entryDate).getTime()) / (1000 * 60)
+      );
+      if (mins < 60) return `${mins}m`;
+      if (mins < 1440) return `${Math.floor(mins / 60)}h ${mins % 60}m`;
+      return `${Math.floor(mins / 1440)}d ${Math.floor((mins % 1440) / 60)}h`;
+    }
+    return null;
+  }, [trade.holdingTime, trade.entryDate, trade.exitDate]);
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    if (!setupDropdownOpen) return;
+    const handler = (e: MouseEvent) => {
+      if (setupDropdownRef.current && !setupDropdownRef.current.contains(e.target as Node)) {
+        setSetupDropdownOpen(false);
+        setSetupSearch("");
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [setupDropdownOpen]);
+
+  // Reset form when dialog opens
+  const handleOpenChange = useCallback(
+    (isOpen: boolean) => {
+      if (isOpen) {
+        setSelectedSetupIds(trade.setups?.map((s: any) => s.id) || []);
+        setNewSetupNames([]);
+        setSetupSearch("");
+        setSetupDropdownOpen(false);
+        setMarketCondition(trade.marketCondition || "");
+        setSession(trade.session || "");
+        setEntryTimeframe(trade.entryTimeframe || "");
+        setRiskRewardRatio(trade.riskRewardRatio != null ? String(trade.riskRewardRatio) : "");
+        setConfidenceLevel(trade.confidenceLevel != null ? trade.confidenceLevel : 5);
+        setDisciplineLevel(trade.disciplineLevel != null ? trade.disciplineLevel : 5);
+        setExitReason(trade.exitReason || "");
+        setLessons(trade.lessons || "");
+        setNotes(trade.notes || "");
+        setMae(trade.mae != null ? String(trade.mae) : "");
+        setMfe(trade.mfe != null ? String(trade.mfe) : "");
+      }
+      setOpen(isOpen);
+    },
+    [trade]
+  );
+
+  // ── Setup helpers ──
+  const filteredSetups = useMemo(() => {
+    if (!setupSearch.trim()) return setups;
+    const q = setupSearch.toLowerCase();
+    return setups.filter((s: any) => s.name.toLowerCase().includes(q));
+  }, [setups, setupSearch]);
+
+  const hasExactMatch = useMemo(() => {
+    if (!setupSearch.trim()) return true; // no search = don't show create
+    const q = setupSearch.trim().toLowerCase();
+    return setups.some((s: any) => s.name.toLowerCase() === q)
+      || newSetupNames.some((n) => n.toLowerCase() === q);
+  }, [setups, newSetupNames, setupSearch]);
+
+  const toggleExistingSetup = (id: string) => {
+    setSelectedSetupIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+    );
+  };
+
+  const removeNewSetup = (name: string) => {
+    setNewSetupNames((prev) => prev.filter((n) => n !== name));
+  };
+
+  const handleCreateNew = () => {
+    const name = setupSearch.trim();
+    if (!name || hasExactMatch) return;
+    setNewSetupNames((prev) => [...prev, name]);
+    setSetupSearch("");
+  };
+
+  // Count total selected
+  const selectedSetupObjects = useMemo(
+    () => setups.filter((s: any) => selectedSetupIds.includes(s.id)),
+    [setups, selectedSetupIds]
+  );
+  const totalSelected = selectedSetupObjects.length + newSetupNames.length;
+
+  const handleSave = () => {
+    startTransition(async () => {
+      await journalTrade({
+        tradeId: trade.id,
+        setupIds: selectedSetupIds,
+        newSetupNames,
+        confidenceLevel: confidenceLevel,
+        disciplineLevel: disciplineLevel,
+        marketCondition: marketCondition || null,
+        session: session || null,
+        entryTimeframe: entryTimeframe || null,
+        riskRewardRatio: riskRewardRatio ? parseFloat(riskRewardRatio) : null,
+        notes: notes || null,
+        exitReason: exitReason || null,
+        lessons: lessons || null,
+        mae: mae ? parseFloat(mae) : null,
+        mfe: mfe ? parseFloat(mfe) : null,
+      });
+      setOpen(false);
+    });
+  };
+
+  const isNewJournal = trade.needsJournal || trade.isNew;
+
+  return (
+    <Dialog open={open} onOpenChange={handleOpenChange}>
+      <DialogTrigger render={<span className="inline-flex" />}>
+        {children}
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-2xl max-h-[85vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>
+            {isNewJournal ? "Journal Trade" : "Edit Journal"} — {trade.symbol}{" "}
+            <Badge
+              variant="outline"
+              className={cn(
+                "text-[10px] ml-1",
+                trade.side === "long"
+                  ? "text-green-500 border-green-500/30"
+                  : "text-red-500 border-red-500/30"
+              )}
+            >
+              {trade.side?.toUpperCase()}
+            </Badge>
+          </DialogTitle>
+          <DialogDescription>
+            {isNewJournal
+              ? "Add journal details for this trade."
+              : "Update your journal entry for this trade."}
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="grid gap-6 py-2">
+          {/* ── Section 1: Entry Journaling ── */}
+          <div className="space-y-4">
+            <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider border-b border-border/40 pb-1.5">
+              Entry Journaling
+            </h4>
+
+            {/* Setups — multi-select dropdown */}
+            <div className="space-y-1.5">
+              <Label className="text-xs">Setups</Label>
+              <div className="relative" ref={setupDropdownRef}>
+                {/* Trigger */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSetupDropdownOpen((v) => !v);
+                    if (!setupDropdownOpen) {
+                      setTimeout(() => setupInputRef.current?.focus(), 0);
+                    }
+                  }}
+                  className={cn(
+                    "flex min-h-[32px] w-full items-center gap-1.5 rounded-md border border-border bg-background px-2 py-1 text-xs text-left transition-colors",
+                    setupDropdownOpen && "ring-1 ring-ring border-ring"
+                  )}
+                >
+                  {totalSelected === 0 ? (
+                    <span className="text-muted-foreground">Select setups...</span>
+                  ) : (
+                    <span className="flex flex-wrap gap-1 flex-1">
+                      {selectedSetupObjects.map((s: any) => (
+                        <span
+                          key={s.id}
+                          className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-medium"
+                          style={{ backgroundColor: `${s.color}20`, color: s.color }}
+                        >
+                          {s.name}
+                          <X
+                            className="h-2.5 w-2.5 cursor-pointer opacity-60 hover:opacity-100"
+                            onClick={(e) => { e.stopPropagation(); toggleExistingSetup(s.id); }}
+                          />
+                        </span>
+                      ))}
+                      {newSetupNames.map((name) => (
+                        <span
+                          key={`new-${name}`}
+                          className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-medium bg-blue-500/15 text-blue-500"
+                        >
+                          {name}
+                          <X
+                            className="h-2.5 w-2.5 cursor-pointer opacity-60 hover:opacity-100"
+                            onClick={(e) => { e.stopPropagation(); removeNewSetup(name); }}
+                          />
+                        </span>
+                      ))}
+                    </span>
+                  )}
+                  <ChevronDown className={cn("h-3.5 w-3.5 shrink-0 text-muted-foreground transition-transform", setupDropdownOpen && "rotate-180")} />
+                </button>
+
+                {/* Dropdown */}
+                {setupDropdownOpen && (
+                  <div className="absolute z-50 mt-1 w-full rounded-md border border-border bg-background shadow-md">
+                    {/* Search input */}
+                    <div className="p-1.5 border-b border-border">
+                      <input
+                        ref={setupInputRef}
+                        type="text"
+                        value={setupSearch}
+                        onChange={(e) => setSetupSearch(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") { e.preventDefault(); handleCreateNew(); }
+                          if (e.key === "Escape") { setSetupDropdownOpen(false); setSetupSearch(""); }
+                        }}
+                        placeholder="Search or type to create..."
+                        className="w-full rounded border-0 bg-muted/40 px-2.5 py-1.5 text-xs outline-none placeholder:text-muted-foreground"
+                      />
+                    </div>
+
+                    {/* Options list */}
+                    <div className="max-h-[200px] overflow-y-auto py-1">
+                      {filteredSetups.map((s: any) => {
+                        const checked = selectedSetupIds.includes(s.id);
+                        return (
+                          <div
+                            key={s.id}
+                            onClick={() => toggleExistingSetup(s.id)}
+                            className="flex items-center gap-2 px-2.5 py-1.5 text-xs cursor-pointer hover:bg-muted/50 transition-colors"
+                          >
+                            <div className={cn(
+                              "flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-[3px] border",
+                              checked ? "border-primary bg-primary" : "border-muted-foreground/40"
+                            )}>
+                              {checked && (
+                                <svg className="h-2.5 w-2.5 text-primary-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                                </svg>
+                              )}
+                            </div>
+                            <div className="h-2.5 w-2.5 rounded-full shrink-0" style={{ backgroundColor: s.color }} />
+                            <span>{s.name}</span>
+                          </div>
+                        );
+                      })}
+
+                      {/* Already-added new setups (shown as checked, non-removable from list) */}
+                      {newSetupNames.map((name) => (
+                        <div
+                          key={`new-${name}`}
+                          className="flex items-center gap-2 px-2.5 py-1.5 text-xs text-blue-500"
+                        >
+                          <div className="flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-[3px] border border-blue-500 bg-blue-500">
+                            <svg className="h-2.5 w-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                            </svg>
+                          </div>
+                          <span>{name}</span>
+                          <span className="text-[10px] text-muted-foreground ml-auto">new</span>
+                        </div>
+                      ))}
+
+                      {/* Create new option */}
+                      {setupSearch.trim() && !hasExactMatch && (
+                        <div
+                          onClick={handleCreateNew}
+                          className="flex items-center gap-2 px-2.5 py-1.5 text-xs cursor-pointer hover:bg-muted/50 transition-colors border-t border-border text-blue-500"
+                        >
+                          <div className="flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-[3px] border border-blue-500/40">
+                            <svg className="h-2.5 w-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                              <path strokeLinecap="round" d="M12 5v14M5 12h14" />
+                            </svg>
+                          </div>
+                          <span>Create <strong>"{setupSearch.trim()}"</strong></span>
+                        </div>
+                      )}
+
+                      {/* Empty */}
+                      {filteredSetups.length === 0 && newSetupNames.length === 0 && !setupSearch.trim() && (
+                        <div className="px-2.5 py-4 text-center text-xs text-muted-foreground">
+                          No setups yet. Type to create one.
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Row: Market Condition, Session, Timeframe */}
+            <div className="grid grid-cols-3 gap-3">
+              <div className="space-y-1.5">
+                <Label className="text-xs">Market Condition</Label>
+                <select
+                  value={marketCondition}
+                  onChange={(e) => setMarketCondition(e.target.value)}
+                  className="flex h-8 w-full rounded-md border border-border bg-background px-2 text-xs"
+                >
+                  <option value="">Select...</option>
+                  {MARKET_CONDITIONS.map((m) => (
+                    <option key={m.value} value={m.value}>
+                      {m.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs">Session</Label>
+                <select
+                  value={session}
+                  onChange={(e) => setSession(e.target.value)}
+                  className="flex h-8 w-full rounded-md border border-border bg-background px-2 text-xs"
+                >
+                  <option value="">Select...</option>
+                  {SESSIONS.map((s) => (
+                    <option key={s.value} value={s.value}>
+                      {s.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs">Entry Timeframe</Label>
+                <select
+                  value={entryTimeframe}
+                  onChange={(e) => setEntryTimeframe(e.target.value)}
+                  className="flex h-8 w-full rounded-md border border-border bg-background px-2 text-xs"
+                >
+                  <option value="">Select...</option>
+                  {TIMEFRAMES.map((tf) => (
+                    <option key={tf} value={tf}>
+                      {tf}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {/* Row: R:R + Confidence Slider */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label className="text-xs">Risk:Reward Ratio</Label>
+                <Input
+                  value={riskRewardRatio}
+                  onChange={(e) => setRiskRewardRatio(e.target.value)}
+                  placeholder="e.g. 2.5"
+                  type="number"
+                  step="0.1"
+                  min="0"
+                  className="h-8 text-xs"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs">
+                  Confidence — <span className="text-foreground font-semibold">{confidenceLevel}/10</span>
+                </Label>
+                <input
+                  type="range"
+                  min={0}
+                  max={10}
+                  step={1}
+                  value={confidenceLevel}
+                  onChange={(e) => setConfidenceLevel(parseInt(e.target.value))}
+                  className="w-full h-2 bg-muted rounded-lg appearance-none cursor-pointer accent-primary"
+                />
+                <div className="flex justify-between text-[9px] text-muted-foreground">
+                  <span>0</span>
+                  <span>5</span>
+                  <span>10</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Notes */}
+            <div className="space-y-1.5">
+              <Label className="text-xs">Notes</Label>
+              <Textarea
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                placeholder="Any notes about this trade setup, context, or observations..."
+                className="text-xs min-h-12"
+              />
+            </div>
+          </div>
+
+          {/* ── Section 2: Post Trade ── */}
+          <div className="space-y-4">
+            <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider border-b border-border/40 pb-1.5">
+              Post Trade
+            </h4>
+
+            {/* Holding Time (auto-computed, display only) */}
+            {holdingTimeDisplay && (
+              <div className="flex items-center gap-2 text-xs bg-muted/30 rounded-md px-3 py-2">
+                <Clock className="h-3.5 w-3.5 text-muted-foreground" />
+                <span className="text-muted-foreground">Holding Time:</span>
+                <span className="font-medium">{holdingTimeDisplay}</span>
+                <span className="text-[10px] text-muted-foreground">(auto-calculated)</span>
+              </div>
+            )}
+
+            {/* Exit Reason */}
+            <div className="space-y-1.5">
+              <Label className="text-xs">Exit Reason</Label>
+              <Textarea
+                value={exitReason}
+                onChange={(e) => setExitReason(e.target.value)}
+                placeholder="Why did you exit? Was it your plan?"
+                className="text-xs min-h-12"
+              />
+            </div>
+
+            {/* Lessons */}
+            <div className="space-y-1.5">
+              <Label className="text-xs">Lessons</Label>
+              <Textarea
+                value={lessons}
+                onChange={(e) => setLessons(e.target.value)}
+                placeholder="What did you learn from this trade?"
+                className="text-xs min-h-12"
+              />
+            </div>
+
+            {/* Discipline Slider */}
+            <div className="space-y-1.5">
+              <Label className="text-xs">
+                Discipline — <span className="text-foreground font-semibold">{disciplineLevel}/10</span>
+              </Label>
+              <input
+                type="range"
+                min={0}
+                max={10}
+                step={1}
+                value={disciplineLevel}
+                onChange={(e) => setDisciplineLevel(parseInt(e.target.value))}
+                className="w-full h-2 bg-muted rounded-lg appearance-none cursor-pointer accent-primary"
+              />
+              <div className="flex justify-between text-[9px] text-muted-foreground">
+                <span>0</span>
+                <span>5</span>
+                <span>10</span>
+              </div>
+            </div>
+
+            {/* MAE / MFE */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label className="text-xs">
+                  MAE <span className="text-muted-foreground font-normal">(Max Adverse Excursion)</span>
+                </Label>
+                <Input
+                  value={mae}
+                  onChange={(e) => setMae(e.target.value)}
+                  placeholder="e.g. 50.00"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  className="h-8 text-xs"
+                />
+                <p className="text-[10px] text-muted-foreground leading-tight">
+                  The maximum unrealized loss during the trade — how far price moved against you before exit.
+                </p>
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs">
+                  MFE <span className="text-muted-foreground font-normal">(Max Favorable Excursion)</span>
+                </Label>
+                <Input
+                  value={mfe}
+                  onChange={(e) => setMfe(e.target.value)}
+                  placeholder="e.g. 120.00"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  className="h-8 text-xs"
+                />
+                <p className="text-[10px] text-muted-foreground leading-tight">
+                  The maximum unrealized profit during the trade — how far price moved in your favor before exit.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <DialogFooter>
+          <DialogClose render={<Button variant="outline" size="sm" />}>
+            Cancel
+          </DialogClose>
+          <Button size="sm" onClick={handleSave} disabled={isPending}>
+            {isPending ? "Saving..." : "Save Journal"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
