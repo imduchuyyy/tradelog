@@ -25,6 +25,7 @@ import { SettingsTab } from "@/components/dashboard/settings-tab";
 import { AIChatPanel } from "@/components/dashboard/ai-chat-panel";
 import { TradeSync } from "@/components/dashboard/sync/trade-sync";
 import { cn } from "@/lib/utils";
+import { useTranslations } from "next-intl";
 
 type Tab = "dashboard" | "calendar" | "setups" | "settings";
 
@@ -46,13 +47,6 @@ interface DashboardShellProps {
   chatSessions: any[];
 }
 
-const tabs: { id: Tab; label: string; icon: React.ElementType }[] = [
-  { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { id: "calendar", label: "Calendar", icon: Calendar },
-  { id: "setups", label: "Setups", icon: Wrench },
-  { id: "settings", label: "Settings", icon: Settings },
-];
-
 export function DashboardShell({
   user,
   trades,
@@ -60,6 +54,8 @@ export function DashboardShell({
   exchanges,
   chatSessions,
 }: DashboardShellProps) {
+  const t = useTranslations("dashboard");
+  const tc = useTranslations("common");
   const [activeTab, setActiveTab] = useState<Tab>("dashboard");
   const [mobileChatOpen, setMobileChatOpen] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
@@ -68,6 +64,13 @@ export function DashboardShell({
   // Sync trigger — TradeSync exposes a trigger function, shell calls it
   const [syncTrigger, setSyncTrigger] = useState(0);
   const [newTradeCount, setNewTradeCount] = useState(0);
+
+  const tabs: { id: Tab; label: string; icon: React.ElementType }[] = [
+    { id: "dashboard", label: t("title"), icon: LayoutDashboard },
+    { id: "calendar", label: t("calendar"), icon: Calendar },
+    { id: "setups", label: t("setups"), icon: Wrench },
+    { id: "settings", label: t("settings"), icon: Settings },
+  ];
 
   const handleOpenChatForContext = (context: any) => {
     setChatContext(context);
@@ -129,9 +132,9 @@ export function DashboardShell({
         {/* Trial banner */}
         {user.plan === "trial" && (
           <div className="mx-3 mb-3 rounded-lg border border-border bg-card p-3">
-            <p className="text-xs font-medium text-success">Free Trial</p>
+            <p className="text-xs font-medium text-success">{t("trial")}</p>
             <p className="mt-0.5 text-xs text-muted-foreground">
-              {trialDaysLeft} days remaining
+              {t("trialDaysLeft", { days: trialDaysLeft })}
             </p>
           </div>
         )}
@@ -147,7 +150,7 @@ export function DashboardShell({
             </Avatar>
             <div className="flex-1 min-w-0">
               <p className="truncate text-sm font-medium">
-                {user.name || "Trader"}
+                {user.name || tc("trader")}
               </p>
               <p className="truncate text-xs text-muted-foreground">
                 {user.email}
@@ -157,7 +160,7 @@ export function DashboardShell({
               variant="ghost"
               size="icon-xs"
               onClick={() => signOut({ callbackUrl: "/" })}
-              title="Sign out"
+              title={t("signOut")}
             >
               <LogOut className="h-3.5 w-3.5" />
             </Button>
@@ -190,7 +193,7 @@ export function DashboardShell({
           {/* Desktop title */}
           <div className="hidden md:block">
             <h1 className="text-lg font-semibold">
-              {tabs.find((t) => t.id === activeTab)?.label}
+              {tabs.find((tab) => tab.id === activeTab)?.label}
             </h1>
           </div>
 
@@ -205,7 +208,7 @@ export function DashboardShell({
                 className="gap-2 text-xs"
               >
                 <RefreshCw className="h-3.5 w-3.5" />
-                Sync Trades
+                {t("syncTrades")}
               </Button>
             )}
 
@@ -217,7 +220,9 @@ export function DashboardShell({
                   <span className="relative inline-flex rounded-full h-2 w-2 bg-success" />
                 </span>
                 <span className="text-xs text-success font-medium">
-                  {newTradeCount} new trade{newTradeCount > 1 ? "s" : ""} synced
+                  {newTradeCount > 1
+                    ? t("newTradesSyncedPlural", { count: newTradeCount })
+                    : t("newTradesSynced", { count: newTradeCount })}
                 </span>
               </div>
             )}
@@ -266,7 +271,7 @@ export function DashboardShell({
           <div className="flex items-center justify-between border-b border-border px-4 py-3 shrink-0">
             <div className="flex items-center gap-2">
               <Sparkles className="h-4 w-4 text-success" />
-              <h3 className="text-sm font-semibold">AI Analytics</h3>
+              <h3 className="text-sm font-semibold">{t("aiAnalytics")}</h3>
             </div>
             <div className="flex items-center gap-1">
               <Button variant="ghost" size="icon-xs" onClick={() => setChatOpen(false)} className="h-7 w-7">
@@ -294,7 +299,7 @@ export function DashboardShell({
           <div className="flex items-center justify-between border-b border-border px-4 py-3 bg-background backdrop-blur-sm">
             <div className="flex items-center gap-2">
               <Sparkles className="h-4 w-4 text-success" />
-              <h3 className="text-sm font-semibold">AI Analytics</h3>
+              <h3 className="text-sm font-semibold">{t("aiAnalytics")}</h3>
             </div>
             <Button variant="ghost" size="icon-xs" onClick={() => setMobileChatOpen(false)} className="h-7 w-7">
               <X className="h-4 w-4" />
@@ -338,7 +343,7 @@ export function DashboardShell({
           )}
         >
           <MessageSquare className="h-4 w-4" />
-          AI
+          {t("aiChat")}
         </button>
       </div>
 

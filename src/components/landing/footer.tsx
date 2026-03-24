@@ -1,6 +1,9 @@
 import { BarChart3 } from "lucide-react";
+import { getTranslations } from "next-intl/server";
 
-export function LandingFooter() {
+export async function LandingFooter() {
+  const t = await getTranslations("landing.footer");
+
   return (
     <footer className="border-t border-border px-4 py-12 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-7xl">
@@ -14,18 +17,18 @@ export function LandingFooter() {
 
           <div className="flex items-center gap-6 text-xs text-muted-foreground">
             <a href="#" className="hover:text-foreground transition-colors">
-              Terms
+              {t("terms")}
             </a>
             <a href="#" className="hover:text-foreground transition-colors">
-              Privacy
+              {t("privacy")}
             </a>
             <a href="#" className="hover:text-foreground transition-colors">
-              Contact
+              {t("contact")}
             </a>
           </div>
 
           <p className="text-xs text-muted-foreground">
-            &copy; {new Date().getFullYear()} TradeLog. All rights reserved.
+            &copy; {new Date().getFullYear()} TradeLog. {t("rights")}
           </p>
         </div>
       </div>

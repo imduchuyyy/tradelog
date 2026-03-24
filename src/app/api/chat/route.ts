@@ -27,9 +27,17 @@ export async function POST(req: Request) {
     return new Response("Unauthorized", { status: 401 });
   }
 
-  const { messages: uiMessages } = await req.json();
+  const { messages: uiMessages, locale } = await req.json();
+
+  const languageNames: Record<string, string> = {
+    en: "English",
+    vi: "Vietnamese",
+  };
+  const languageName = languageNames[locale] || "English";
 
   const systemPrompt = `You are the TradeLog AI Analytics Assistant. You help traders analyze their trading data using SQL queries and computations.
+
+IMPORTANT: You MUST respond in ${languageName}. All your analysis, explanations, and advice should be written in ${languageName}.
 
 CONTEXT: The user has a SQLite database with their trading data. You have two powerful tools:
 1. **queryTrades** — Run READ-ONLY SQL queries against the database

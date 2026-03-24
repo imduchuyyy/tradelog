@@ -47,24 +47,28 @@ import {
   Cell,
 } from "recharts";
 import { journalTrade } from "@/app/actions";
+import { useTranslations } from "next-intl";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
-const MARKET_CONDITIONS = [
-  { value: "trending", label: "Trending" },
-  { value: "range", label: "Range" },
-  { value: "50/50", label: "50/50" },
-  { value: "counter_trend", label: "Counter Trend" },
-];
+const MARKET_CONDITION_VALUES = ["trending", "range", "50/50", "counter_trend"] as const;
+const SESSION_VALUES = ["sydney", "tokyo", "london", "new_york"] as const;
 
-const SESSIONS = [
-  { value: "sydney", label: "Sydney" },
-  { value: "tokyo", label: "Tokyo" },
-  { value: "london", label: "London" },
-  { value: "new_york", label: "New York" },
-];
+const MC_KEY_MAP: Record<string, string> = {
+  trending: "trending",
+  range: "range",
+  "50/50": "5050",
+  counter_trend: "counterTrend",
+};
+
+const SESSION_KEY_MAP: Record<string, string> = {
+  sydney: "sydney",
+  tokyo: "tokyo",
+  london: "london",
+  new_york: "newYork",
+};
 
 const TIMEFRAMES = ["1m", "5m", "15m", "30m", "1h", "4h", "1d", "1w"];
 
@@ -111,6 +115,14 @@ const defaultFilters: Filters = {
 // ─── Component ───────────────────────────────────────────────────────────────
 
 export function DashboardTab({ trades, setups = [], onOpenChat }: DashboardTabProps) {
+  const tOverview = useTranslations("dashboard.overview");
+  const tFilters = useTranslations("dashboard.filters");
+  const tTable = useTranslations("dashboard.table");
+  const tExpanded = useTranslations("dashboard.expanded");
+  const tMC = useTranslations("dashboard.marketConditions");
+  const tSess = useTranslations("dashboard.sessions");
+  const tc = useTranslations("common");
+
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
   const [filters, setFilters] = useState<Filters>(defaultFilters);
   const [showFilters, setShowFilters] = useState(false);
@@ -299,7 +311,7 @@ export function DashboardTab({ trades, setups = [], onOpenChat }: DashboardTabPr
     });
     const sessionData = Array.from(sessionMap.entries())
       .map(([name, stats]) => ({
-        name: SESSIONS.find((s) => s.value === name)?.label || name,
+        name: SESSION_KEY_MAP[name] ? tSess(SESSION_KEY_MAP[name]) : name,
         pnl: stats.pnl,
         winRate: (stats.wins / stats.total) * 100,
         trades: stats.total,
@@ -344,19 +356,19 @@ export function DashboardTab({ trades, setups = [], onOpenChat }: DashboardTabPr
 
   const getSessionLabel = (val: string | null | undefined) => {
     if (!val) return "-";
-    return SESSIONS.find((s) => s.value === val)?.label || val;
+    return SESSION_KEY_MAP[val] ? tSess(SESSION_KEY_MAP[val]) : val;
   };
 
   const getMarketConditionLabel = (val: string | null | undefined) => {
     if (!val) return "-";
-    return MARKET_CONDITIONS.find((m) => m.value === val)?.label || val;
+    return MC_KEY_MAP[val] ? tMC(MC_KEY_MAP[val]) : val;
   };
 
   return (
     <div className="space-y-6 pb-12">
       {/* Header + Filter Toggle */}
       <div className="flex items-center justify-between gap-4 flex-wrap">
-        <h2 className="text-2xl font-bold tracking-tight">Trading Overview</h2>
+        <h2 className="text-2xl font-bold tracking-tight">{tOverview("title")}</h2>
         <Button
           variant={showFilters ? "default" : "outline"}
           size="sm"
@@ -364,7 +376,7 @@ export function DashboardTab({ trades, setups = [], onOpenChat }: DashboardTabPr
           className="gap-2"
         >
           <Filter className="h-3.5 w-3.5" />
-          Filters
+          {tOverview("filters")}
           {activeFilterCount > 0 && (
             <Badge variant="secondary" className="ml-1 h-5 min-w-5 rounded-full text-[10px] px-1.5">
               {activeFilterCount}
@@ -380,7 +392,7 @@ export function DashboardTab({ trades, setups = [], onOpenChat }: DashboardTabPr
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3">
               {/* Symbol */}
               <div className="space-y-1">
-                <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Symbol</label>
+                <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">{tFilters("symbol")}</label>
                 <Input
                   value={filters.symbol}
                   onChange={(e) => setFilter("symbol", e.target.value)}
@@ -391,13 +403,13 @@ export function DashboardTab({ trades, setups = [], onOpenChat }: DashboardTabPr
 
               {/* Setup */}
               <div className="space-y-1">
-                <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Setup</label>
+                <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">{tFilters("setup")}</label>
                 <select
                   value={filters.setup}
                   onChange={(e) => setFilter("setup", e.target.value)}
                   className="flex h-8 w-full rounded-md border border-border bg-background px-2 text-xs"
                 >
-                  <option value="">All</option>
+                  <option value="">{tc("all")}</option>
                   {setups.map((s: any) => (
                     <option key={s.id} value={s.id}>{s.name}</option>
                   ))}
@@ -406,43 +418,43 @@ export function DashboardTab({ trades, setups = [], onOpenChat }: DashboardTabPr
 
               {/* Market Condition */}
               <div className="space-y-1">
-                <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Condition</label>
+                <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">{tFilters("condition")}</label>
                 <select
                   value={filters.marketCondition}
                   onChange={(e) => setFilter("marketCondition", e.target.value)}
                   className="flex h-8 w-full rounded-md border border-border bg-background px-2 text-xs"
                 >
-                  <option value="">All</option>
-                  {MARKET_CONDITIONS.map((m) => (
-                    <option key={m.value} value={m.value}>{m.label}</option>
+                  <option value="">{tc("all")}</option>
+                  {MARKET_CONDITION_VALUES.map((val) => (
+                    <option key={val} value={val}>{tMC(MC_KEY_MAP[val])}</option>
                   ))}
                 </select>
               </div>
 
               {/* Session */}
               <div className="space-y-1">
-                <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Session</label>
+                <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">{tFilters("session")}</label>
                 <select
                   value={filters.session}
                   onChange={(e) => setFilter("session", e.target.value)}
                   className="flex h-8 w-full rounded-md border border-border bg-background px-2 text-xs"
                 >
-                  <option value="">All</option>
-                  {SESSIONS.map((s) => (
-                    <option key={s.value} value={s.value}>{s.label}</option>
+                  <option value="">{tc("all")}</option>
+                  {SESSION_VALUES.map((val) => (
+                    <option key={val} value={val}>{tSess(SESSION_KEY_MAP[val])}</option>
                   ))}
                 </select>
               </div>
 
               {/* Side */}
               <div className="space-y-1">
-                <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Side</label>
+                <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">{tFilters("side")}</label>
                 <select
                   value={filters.side}
                   onChange={(e) => setFilter("side", e.target.value)}
                   className="flex h-8 w-full rounded-md border border-border bg-background px-2 text-xs"
                 >
-                  <option value="">All</option>
+                  <option value="">{tc("all")}</option>
                   <option value="long">Long</option>
                   <option value="short">Short</option>
                 </select>
@@ -450,13 +462,13 @@ export function DashboardTab({ trades, setups = [], onOpenChat }: DashboardTabPr
 
               {/* Status */}
               <div className="space-y-1">
-                <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Status</label>
+                <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">{tFilters("status")}</label>
                 <select
                   value={filters.status}
                   onChange={(e) => setFilter("status", e.target.value)}
                   className="flex h-8 w-full rounded-md border border-border bg-background px-2 text-xs"
                 >
-                  <option value="">All</option>
+                  <option value="">{tc("all")}</option>
                   <option value="open">Open</option>
                   <option value="closed">Closed</option>
                 </select>
@@ -464,13 +476,13 @@ export function DashboardTab({ trades, setups = [], onOpenChat }: DashboardTabPr
 
               {/* Entry Timeframe */}
               <div className="space-y-1">
-                <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Timeframe</label>
+                <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">{tFilters("timeframe")}</label>
                 <select
                   value={filters.entryTimeframe}
                   onChange={(e) => setFilter("entryTimeframe", e.target.value)}
                   className="flex h-8 w-full rounded-md border border-border bg-background px-2 text-xs"
                 >
-                  <option value="">All</option>
+                  <option value="">{tc("all")}</option>
                   {TIMEFRAMES.map((tf) => (
                     <option key={tf} value={tf}>{tf}</option>
                   ))}
@@ -479,12 +491,12 @@ export function DashboardTab({ trades, setups = [], onOpenChat }: DashboardTabPr
 
               {/* Confidence Range */}
               <div className="space-y-1">
-                <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Confidence</label>
+                <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">{tFilters("confidence")}</label>
                 <div className="flex gap-1">
                   <Input
                     value={filters.minConfidence}
                     onChange={(e) => setFilter("minConfidence", e.target.value)}
-                    placeholder="Min"
+                    placeholder={tFilters("min")}
                     type="number"
                     min="1"
                     max="10"
@@ -493,7 +505,7 @@ export function DashboardTab({ trades, setups = [], onOpenChat }: DashboardTabPr
                   <Input
                     value={filters.maxConfidence}
                     onChange={(e) => setFilter("maxConfidence", e.target.value)}
-                    placeholder="Max"
+                    placeholder={tFilters("max")}
                     type="number"
                     min="1"
                     max="10"
@@ -504,12 +516,12 @@ export function DashboardTab({ trades, setups = [], onOpenChat }: DashboardTabPr
 
               {/* Discipline Range */}
               <div className="space-y-1">
-                <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Discipline</label>
+                <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">{tFilters("discipline")}</label>
                 <div className="flex gap-1">
                   <Input
                     value={filters.minDiscipline}
                     onChange={(e) => setFilter("minDiscipline", e.target.value)}
-                    placeholder="Min"
+                    placeholder={tFilters("min")}
                     type="number"
                     min="1"
                     max="10"
@@ -518,7 +530,7 @@ export function DashboardTab({ trades, setups = [], onOpenChat }: DashboardTabPr
                   <Input
                     value={filters.maxDiscipline}
                     onChange={(e) => setFilter("maxDiscipline", e.target.value)}
-                    placeholder="Max"
+                    placeholder={tFilters("max")}
                     type="number"
                     min="1"
                     max="10"
@@ -529,19 +541,19 @@ export function DashboardTab({ trades, setups = [], onOpenChat }: DashboardTabPr
 
               {/* Holding Time Range (minutes) */}
               <div className="space-y-1">
-                <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Hold (min)</label>
+                <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">{tFilters("holdMin")}</label>
                 <div className="flex gap-1">
                   <Input
                     value={filters.minHoldingTime}
                     onChange={(e) => setFilter("minHoldingTime", e.target.value)}
-                    placeholder="Min"
+                    placeholder={tFilters("min")}
                     type="number"
                     className="h-8 text-xs w-1/2"
                   />
                   <Input
                     value={filters.maxHoldingTime}
                     onChange={(e) => setFilter("maxHoldingTime", e.target.value)}
-                    placeholder="Max"
+                    placeholder={tFilters("max")}
                     type="number"
                     className="h-8 text-xs w-1/2"
                   />
@@ -553,10 +565,10 @@ export function DashboardTab({ trades, setups = [], onOpenChat }: DashboardTabPr
               <div className="mt-3 flex items-center gap-2">
                 <Button variant="ghost" size="sm" onClick={clearFilters} className="h-7 text-xs gap-1.5 text-muted-foreground">
                   <X className="h-3 w-3" />
-                  Clear all filters
+                  {tOverview("clearAllFilters")}
                 </Button>
                 <span className="text-xs text-muted-foreground">
-                  Showing {sortedTrades.length} of {trades.length} trades
+                  {tOverview("showingOf", { shown: sortedTrades.length, total: trades.length })}
                 </span>
               </div>
             )}
@@ -568,63 +580,63 @@ export function DashboardTab({ trades, setups = [], onOpenChat }: DashboardTabPr
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <Card className="bg-card border-border">
           <CardContent className="p-3">
-            <p className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider">Trades</p>
+            <p className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider">{tOverview("trades")}</p>
             <p className="text-xl font-bold text-foreground mt-1">{metrics.totalTrades}</p>
-            <p className="text-[9px] text-muted-foreground">{metrics.openTrades} open / {metrics.closedTrades} closed</p>
+            <p className="text-[9px] text-muted-foreground">{tOverview("openClosed", { open: metrics.openTrades, closed: metrics.closedTrades })}</p>
           </CardContent>
         </Card>
 
         <Card className="bg-card border-border">
           <CardContent className="p-3">
-            <p className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider">Win Rate</p>
+            <p className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider">{tOverview("winRate")}</p>
             <p className="text-xl font-bold text-success mt-1">{metrics.winRate.toFixed(1)}%</p>
-            <p className="text-[9px] text-muted-foreground">{metrics.wins}W / {metrics.losses}L</p>
+            <p className="text-[9px] text-muted-foreground">{tOverview("winsLosses", { wins: metrics.wins, losses: metrics.losses })}</p>
           </CardContent>
         </Card>
 
         <Card className="bg-card border-border">
           <CardContent className="p-3">
-            <p className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider">Total PnL</p>
+            <p className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider">{tOverview("totalPnl")}</p>
             <p className={cn("text-xl font-bold mt-1", pnlColor(metrics.totalPnl))}>{formatMoney(metrics.totalPnl)}</p>
           </CardContent>
         </Card>
 
         <Card className="bg-card border-border">
           <CardContent className="p-3">
-            <p className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider">Expectancy</p>
+            <p className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider">{tOverview("expectancy")}</p>
             <p className={cn("text-xl font-bold mt-1", pnlColor(metrics.expectancy))}>{formatMoney(metrics.expectancy)}</p>
-            <p className="text-[9px] text-muted-foreground">per trade</p>
+            <p className="text-[9px] text-muted-foreground">{tOverview("perTrade")}</p>
           </CardContent>
         </Card>
 
         <Card className="bg-card border-border">
           <CardContent className="p-3">
-            <p className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider">Profit Factor</p>
+            <p className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider">{tOverview("profitFactor")}</p>
             <p className="text-xl font-bold text-muted-foreground mt-1">{metrics.profitFactor.toFixed(2)}</p>
           </CardContent>
         </Card>
 
         <Card className="bg-card border-border">
           <CardContent className="p-3">
-            <p className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider">Max Drawdown</p>
+            <p className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider">{tOverview("maxDrawdown")}</p>
             <p className="text-xl font-bold text-destructive mt-1">-${metrics.maxDrawdown.toFixed(2)}</p>
           </CardContent>
         </Card>
 
         <Card className="bg-card border-border">
           <CardContent className="p-3">
-            <p className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider">R:R Ratio</p>
+            <p className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider">{tOverview("rrRatio")}</p>
             <p className="text-xl font-bold text-muted-foreground mt-1">{metrics.riskReward.toFixed(2)}x</p>
           </CardContent>
         </Card>
 
         <Card className="bg-card border-border">
           <CardContent className="p-3">
-            <p className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider">Streak</p>
+            <p className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider">{tOverview("streak")}</p>
             <p className={cn("text-xl font-bold mt-1", metrics.currentStreak >= 0 ? "text-success" : "text-destructive")}>
               {metrics.currentStreak > 0 ? `+${metrics.currentStreak}` : metrics.currentStreak}
             </p>
-            <p className="text-[9px] text-muted-foreground">max W{metrics.maxWinStreak} / L{metrics.maxLossStreak}</p>
+            <p className="text-[9px] text-muted-foreground">{tOverview("maxStreaks", { win: metrics.maxWinStreak, loss: metrics.maxLossStreak })}</p>
           </CardContent>
         </Card>
       </div>
@@ -636,7 +648,7 @@ export function DashboardTab({ trades, setups = [], onOpenChat }: DashboardTabPr
           <CardHeader className="pb-2 pt-4 px-4">
             <CardTitle className="text-sm font-semibold flex items-center gap-2">
               <TrendingUp className="h-4 w-4 text-foreground" />
-              Cumulative PnL
+              {tOverview("cumulativePnl")}
             </CardTitle>
           </CardHeader>
           <CardContent className="px-2 pb-3">
@@ -651,7 +663,7 @@ export function DashboardTab({ trades, setups = [], onOpenChat }: DashboardTabPr
                 </LineChart>
               </ChartContainer>
             ) : (
-              <div className="h-48 flex items-center justify-center text-xs text-muted-foreground">Need at least 2 closed trades</div>
+              <div className="h-48 flex items-center justify-center text-xs text-muted-foreground">{tOverview("needAtLeast2")}</div>
             )}
           </CardContent>
         </Card>
@@ -661,7 +673,7 @@ export function DashboardTab({ trades, setups = [], onOpenChat }: DashboardTabPr
           <CardHeader className="pb-2 pt-4 px-4">
             <CardTitle className="text-sm font-semibold flex items-center gap-2">
               <Percent className="h-4 w-4 text-success" />
-              Win Rate Over Time
+              {tOverview("winRateOverTime")}
             </CardTitle>
           </CardHeader>
           <CardContent className="px-2 pb-3">
@@ -676,7 +688,7 @@ export function DashboardTab({ trades, setups = [], onOpenChat }: DashboardTabPr
                 </LineChart>
               </ChartContainer>
             ) : (
-              <div className="h-48 flex items-center justify-center text-xs text-muted-foreground">Need at least 2 closed trades</div>
+              <div className="h-48 flex items-center justify-center text-xs text-muted-foreground">{tOverview("needAtLeast2")}</div>
             )}
           </CardContent>
         </Card>
@@ -686,7 +698,7 @@ export function DashboardTab({ trades, setups = [], onOpenChat }: DashboardTabPr
           <CardHeader className="pb-2 pt-4 px-4">
             <CardTitle className="text-sm font-semibold flex items-center gap-2">
               <Zap className="h-4 w-4 text-foreground" />
-              Performance by Setup
+              {tOverview("performanceBySetup")}
             </CardTitle>
           </CardHeader>
           <CardContent className="px-2 pb-3">
@@ -705,7 +717,7 @@ export function DashboardTab({ trades, setups = [], onOpenChat }: DashboardTabPr
                 </BarChart>
               </ChartContainer>
             ) : (
-              <div className="h-48 flex items-center justify-center text-xs text-muted-foreground">No setup data yet</div>
+              <div className="h-48 flex items-center justify-center text-xs text-muted-foreground">{tOverview("noSetupData")}</div>
             )}
           </CardContent>
         </Card>
@@ -715,7 +727,7 @@ export function DashboardTab({ trades, setups = [], onOpenChat }: DashboardTabPr
           <CardHeader className="pb-2 pt-4 px-4">
             <CardTitle className="text-sm font-semibold flex items-center gap-2">
               <Clock className="h-4 w-4 text-muted-foreground" />
-              Performance by Session
+              {tOverview("performanceBySession")}
             </CardTitle>
           </CardHeader>
           <CardContent className="px-2 pb-3">
@@ -734,7 +746,7 @@ export function DashboardTab({ trades, setups = [], onOpenChat }: DashboardTabPr
                 </BarChart>
               </ChartContainer>
             ) : (
-              <div className="h-48 flex items-center justify-center text-xs text-muted-foreground">No session data yet</div>
+              <div className="h-48 flex items-center justify-center text-xs text-muted-foreground">{tOverview("noSessionData")}</div>
             )}
           </CardContent>
         </Card>
@@ -745,7 +757,7 @@ export function DashboardTab({ trades, setups = [], onOpenChat }: DashboardTabPr
         <CardHeader className="pb-2 pt-4 px-4">
           <CardTitle className="text-sm font-semibold flex items-center gap-2">
             <Activity className="h-4 w-4 text-foreground" />
-            Trades ({sortedTrades.length})
+            {tOverview("trades")} ({sortedTrades.length})
           </CardTitle>
         </CardHeader>
         <CardContent className="p-0">
@@ -754,20 +766,20 @@ export function DashboardTab({ trades, setups = [], onOpenChat }: DashboardTabPr
               <thead>
                 <tr className="border-b border-border">
                   <th className="px-3 py-2.5 text-left font-semibold text-muted-foreground w-8"></th>
-                  <th className="px-3 py-2.5 text-left font-semibold text-muted-foreground">Symbol</th>
-                  <th className="px-3 py-2.5 text-left font-semibold text-muted-foreground">Side</th>
-                  <th className="px-3 py-2.5 text-left font-semibold text-muted-foreground">Status</th>
-                  <th className="px-3 py-2.5 text-right font-semibold text-muted-foreground">Entry</th>
-                  <th className="px-3 py-2.5 text-right font-semibold text-muted-foreground">Exit</th>
-                  <th className="px-3 py-2.5 text-right font-semibold text-muted-foreground">PnL</th>
-                  <th className="px-3 py-2.5 text-center font-semibold text-muted-foreground w-20">Journal</th>
+                  <th className="px-3 py-2.5 text-left font-semibold text-muted-foreground">{tTable("symbol")}</th>
+                  <th className="px-3 py-2.5 text-left font-semibold text-muted-foreground">{tTable("side")}</th>
+                  <th className="px-3 py-2.5 text-left font-semibold text-muted-foreground">{tTable("status")}</th>
+                  <th className="px-3 py-2.5 text-right font-semibold text-muted-foreground">{tTable("entry")}</th>
+                  <th className="px-3 py-2.5 text-right font-semibold text-muted-foreground">{tTable("exit")}</th>
+                  <th className="px-3 py-2.5 text-right font-semibold text-muted-foreground">{tTable("pnl")}</th>
+                  <th className="px-3 py-2.5 text-center font-semibold text-muted-foreground w-20">{tTable("journal")}</th>
                 </tr>
               </thead>
               <tbody>
                 {sortedTrades.length === 0 ? (
                   <tr>
                     <td colSpan={8} className="px-3 py-8 text-center text-muted-foreground">
-                      No trades found{activeFilterCount > 0 ? " matching your filters" : ""}. Sync from your exchange to get started.
+                      {activeFilterCount > 0 ? tTable("noTradesMatchingFilters") : tTable("noTradesFound")}{activeFilterCount === 0 ? ` ${tTable("syncToGetStarted")}` : ""}
                     </td>
                   </tr>
                 ) : (
@@ -813,12 +825,12 @@ export function DashboardTab({ trades, setups = [], onOpenChat }: DashboardTabPr
                             {t.needsJournal || t.isNew ? (
                               <Badge variant="outline" className="text-[10px] border-amber-500/40 text-amber-500 cursor-pointer hover:bg-amber-500/10 gap-1">
                                 <BookOpen className="h-3 w-3" />
-                                Add
+                                {tTable("add")}
                               </Badge>
                             ) : (
                               <Badge variant="outline" className="text-[10px] border-border text-muted-foreground cursor-pointer hover:bg-muted gap-1">
                                 <Pencil className="h-3 w-3" />
-                                Edit
+                                {tTable("editJournal")}
                               </Badge>
                             )}
                           </TradeJournalDialog>
@@ -832,31 +844,31 @@ export function DashboardTab({ trades, setups = [], onOpenChat }: DashboardTabPr
                             <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4 text-xs">
                               {/* Moved from main row */}
                               <div>
-                                <p className="text-muted-foreground font-medium mb-1">Condition</p>
+                                <p className="text-muted-foreground font-medium mb-1">{tExpanded("condition")}</p>
                                 <p>{getMarketConditionLabel(t.marketCondition)}</p>
                               </div>
                               <div>
-                                <p className="text-muted-foreground font-medium mb-1">Session</p>
+                                <p className="text-muted-foreground font-medium mb-1">{tExpanded("session")}</p>
                                 <p>{getSessionLabel(t.session)}</p>
                               </div>
                               <div>
-                                <p className="text-muted-foreground font-medium mb-1">R:R</p>
+                                <p className="text-muted-foreground font-medium mb-1">{tExpanded("rr")}</p>
                                 <p>{t.riskRewardRatio ? `${t.riskRewardRatio.toFixed(1)}` : "-"}</p>
                               </div>
                               <div>
-                                <p className="text-muted-foreground font-medium mb-1">Confidence</p>
+                                <p className="text-muted-foreground font-medium mb-1">{tExpanded("confidence")}</p>
                                 <p>{t.confidenceLevel ? `${t.confidenceLevel}/10` : "-"}</p>
                               </div>
                               <div>
-                                <p className="text-muted-foreground font-medium mb-1">Discipline</p>
+                                <p className="text-muted-foreground font-medium mb-1">{tExpanded("discipline")}</p>
                                 <p>{t.disciplineLevel ? `${t.disciplineLevel}/10` : "-"}</p>
                               </div>
                               <div>
-                                <p className="text-muted-foreground font-medium mb-1">Holding Time</p>
+                                <p className="text-muted-foreground font-medium mb-1">{tExpanded("holdingTime")}</p>
                                 <p>{formatHoldingTime(t.holdingTime)}</p>
                               </div>
                               <div>
-                                <p className="text-muted-foreground font-medium mb-1">Date</p>
+                                <p className="text-muted-foreground font-medium mb-1">{tExpanded("date")}</p>
                                 <p>{new Date(t.entryDate).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "2-digit" })}</p>
                               </div>
                             </div>
@@ -864,7 +876,7 @@ export function DashboardTab({ trades, setups = [], onOpenChat }: DashboardTabPr
                             {/* Second row: existing expanded data */}
                             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs mt-4 pt-4 border-t border-border">
                               <div>
-                                <p className="text-muted-foreground font-medium mb-1">Setups</p>
+                                <p className="text-muted-foreground font-medium mb-1">{tExpanded("setups")}</p>
                                 <div className="flex flex-wrap gap-1">
                                   {t.setups?.length > 0
                                     ? t.setups.map((s: any) => (
@@ -872,16 +884,16 @@ export function DashboardTab({ trades, setups = [], onOpenChat }: DashboardTabPr
                                           {s.name}
                                         </Badge>
                                       ))
-                                    : <span className="text-muted-foreground">None</span>
+                                    : <span className="text-muted-foreground">{tc("none")}</span>
                                   }
                                 </div>
                               </div>
                               <div>
-                                <p className="text-muted-foreground font-medium mb-1">Timeframe</p>
+                                <p className="text-muted-foreground font-medium mb-1">{tExpanded("timeframe")}</p>
                                 <p>{t.entryTimeframe || "-"}</p>
                               </div>
                               <div>
-                                <p className="text-muted-foreground font-medium mb-1">MAE / MFE</p>
+                                <p className="text-muted-foreground font-medium mb-1">{tExpanded("maeMfe")}</p>
                                 <p>
                                   {t.mae !== null ? <span className="text-destructive">${t.mae.toFixed(2)}</span> : "-"}
                                   {" / "}
@@ -890,19 +902,19 @@ export function DashboardTab({ trades, setups = [], onOpenChat }: DashboardTabPr
                               </div>
                               {t.exitReason && (
                                 <div className="col-span-2">
-                                  <p className="text-muted-foreground font-medium mb-1">Exit Reason</p>
+                                  <p className="text-muted-foreground font-medium mb-1">{tExpanded("exitReason")}</p>
                                   <p className="text-foreground">{t.exitReason}</p>
                                 </div>
                               )}
                               {t.lessons && (
                                 <div className="col-span-2">
-                                  <p className="text-muted-foreground font-medium mb-1">Lessons</p>
+                                  <p className="text-muted-foreground font-medium mb-1">{tExpanded("lessons")}</p>
                                   <p className="text-foreground">{t.lessons}</p>
                                 </div>
                               )}
                               {t.notes && (
                                 <div className="col-span-2">
-                                  <p className="text-muted-foreground font-medium mb-1">Notes</p>
+                                  <p className="text-muted-foreground font-medium mb-1">{tExpanded("notes")}</p>
                                   <p className="text-foreground">{t.notes}</p>
                                 </div>
                               )}
@@ -933,6 +945,11 @@ function TradeJournalDialog({
   setups: any[];
   children: React.ReactNode;
 }) {
+  const tJournal = useTranslations("dashboard.journal");
+  const tMC = useTranslations("dashboard.marketConditions");
+  const tSess = useTranslations("dashboard.sessions");
+  const tc = useTranslations("common");
+
   const [open, setOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
 
@@ -1094,7 +1111,7 @@ function TradeJournalDialog({
       <DialogContent className="sm:max-w-2xl max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
-            {isNewJournal ? "Journal Trade" : "Edit Journal"} — {trade.symbol}{" "}
+            {isNewJournal ? tJournal("journalTrade") : tJournal("editJournal")} — {trade.symbol}{" "}
             <Badge
               variant="outline"
               className={cn(
@@ -1109,8 +1126,8 @@ function TradeJournalDialog({
           </DialogTitle>
           <DialogDescription>
             {isNewJournal
-              ? "Add journal details for this trade."
-              : "Update your journal entry for this trade."}
+              ? tJournal("addDetails")
+              : tJournal("updateDetails")}
           </DialogDescription>
         </DialogHeader>
 
@@ -1118,12 +1135,12 @@ function TradeJournalDialog({
           {/* ── Section 1: Entry Journaling ── */}
           <div className="space-y-4">
             <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider border-b border-border pb-1.5">
-              Entry Journaling
+              {tJournal("entryJournaling")}
             </h4>
 
             {/* Setups — multi-select dropdown */}
             <div className="space-y-1.5">
-              <Label className="text-xs">Setups</Label>
+              <Label className="text-xs">{tJournal("setups")}</Label>
               <div className="relative" ref={setupDropdownRef}>
                 {/* Trigger */}
                 <button
@@ -1140,7 +1157,7 @@ function TradeJournalDialog({
                   )}
                 >
                   {totalSelected === 0 ? (
-                    <span className="text-muted-foreground">Select setups...</span>
+                    <span className="text-muted-foreground">{tJournal("selectSetups")}</span>
                   ) : (
                     <span className="flex flex-wrap gap-1 flex-1">
                       {selectedSetupObjects.map((s: any) => (
@@ -1187,7 +1204,7 @@ function TradeJournalDialog({
                           if (e.key === "Enter") { e.preventDefault(); handleCreateNew(); }
                           if (e.key === "Escape") { setSetupDropdownOpen(false); setSetupSearch(""); }
                         }}
-                        placeholder="Search or type to create..."
+                        placeholder={tJournal("searchOrCreate")}
                         className="w-full rounded border-0 bg-muted px-2.5 py-1.5 text-xs outline-none placeholder:text-muted-foreground"
                       />
                     </div>
@@ -1230,7 +1247,7 @@ function TradeJournalDialog({
                             </svg>
                           </div>
                           <span>{name}</span>
-                          <span className="text-[10px] text-muted-foreground ml-auto">new</span>
+                          <span className="text-[10px] text-muted-foreground ml-auto">{tc("new")}</span>
                         </div>
                       ))}
 
@@ -1245,14 +1262,14 @@ function TradeJournalDialog({
                               <path strokeLinecap="round" d="M12 5v14M5 12h14" />
                             </svg>
                           </div>
-                          <span>Create <strong>"{setupSearch.trim()}"</strong></span>
+                          <span>{tJournal("create")} <strong>&quot;{setupSearch.trim()}&quot;</strong></span>
                         </div>
                       )}
 
                       {/* Empty */}
                       {filteredSetups.length === 0 && newSetupNames.length === 0 && !setupSearch.trim() && (
                         <div className="px-2.5 py-4 text-center text-xs text-muted-foreground">
-                          No setups yet. Type to create one.
+                          {tJournal("noSetupsYet")}
                         </div>
                       )}
                     </div>
@@ -1264,43 +1281,43 @@ function TradeJournalDialog({
             {/* Row: Market Condition, Session, Timeframe */}
             <div className="grid grid-cols-3 gap-3">
               <div className="space-y-1.5">
-                <Label className="text-xs">Market Condition</Label>
+                <Label className="text-xs">{tJournal("marketCondition")}</Label>
                 <select
                   value={marketCondition}
                   onChange={(e) => setMarketCondition(e.target.value)}
                   className="flex h-8 w-full rounded-md border border-border bg-background px-2 text-xs"
                 >
-                  <option value="">Select...</option>
-                  {MARKET_CONDITIONS.map((m) => (
-                    <option key={m.value} value={m.value}>
-                      {m.label}
+                  <option value="">{tc("select")}</option>
+                  {MARKET_CONDITION_VALUES.map((val) => (
+                    <option key={val} value={val}>
+                      {tMC(MC_KEY_MAP[val])}
                     </option>
                   ))}
                 </select>
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs">Session</Label>
+                <Label className="text-xs">{tJournal("session")}</Label>
                 <select
                   value={session}
                   onChange={(e) => setSession(e.target.value)}
                   className="flex h-8 w-full rounded-md border border-border bg-background px-2 text-xs"
                 >
-                  <option value="">Select...</option>
-                  {SESSIONS.map((s) => (
-                    <option key={s.value} value={s.value}>
-                      {s.label}
+                  <option value="">{tc("select")}</option>
+                  {SESSION_VALUES.map((val) => (
+                    <option key={val} value={val}>
+                      {tSess(SESSION_KEY_MAP[val])}
                     </option>
                   ))}
                 </select>
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs">Entry Timeframe</Label>
+                <Label className="text-xs">{tJournal("entryTimeframe")}</Label>
                 <select
                   value={entryTimeframe}
                   onChange={(e) => setEntryTimeframe(e.target.value)}
                   className="flex h-8 w-full rounded-md border border-border bg-background px-2 text-xs"
                 >
-                  <option value="">Select...</option>
+                  <option value="">{tc("select")}</option>
                   {TIMEFRAMES.map((tf) => (
                     <option key={tf} value={tf}>
                       {tf}
@@ -1313,7 +1330,7 @@ function TradeJournalDialog({
             {/* Row: R:R + Confidence Slider */}
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <Label className="text-xs">Risk:Reward Ratio</Label>
+                <Label className="text-xs">{tJournal("riskRewardRatio")}</Label>
                 <Input
                   value={riskRewardRatio}
                   onChange={(e) => setRiskRewardRatio(e.target.value)}
@@ -1326,7 +1343,7 @@ function TradeJournalDialog({
               </div>
               <div className="space-y-1.5">
                 <Label className="text-xs">
-                  Confidence — <span className="text-foreground font-semibold">{confidenceLevel}/10</span>
+                  {tJournal("confidence")} — <span className="text-foreground font-semibold">{confidenceLevel}/10</span>
                 </Label>
                 <input
                   type="range"
@@ -1347,11 +1364,11 @@ function TradeJournalDialog({
 
             {/* Notes */}
             <div className="space-y-1.5">
-              <Label className="text-xs">Notes</Label>
+              <Label className="text-xs">{tJournal("notes")}</Label>
               <Textarea
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
-                placeholder="Any notes about this trade setup, context, or observations..."
+                placeholder={tJournal("notesPlaceholder")}
                 className="text-xs min-h-12"
               />
             </div>
@@ -1360,37 +1377,37 @@ function TradeJournalDialog({
           {/* ── Section 2: Post Trade ── */}
           <div className="space-y-4">
             <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider border-b border-border pb-1.5">
-              Post Trade
+              {tJournal("postTrade")}
             </h4>
 
             {/* Holding Time (auto-computed, display only) */}
             {holdingTimeDisplay && (
               <div className="flex items-center gap-2 text-xs bg-muted rounded-md px-3 py-2">
                 <Clock className="h-3.5 w-3.5 text-muted-foreground" />
-                <span className="text-muted-foreground">Holding Time:</span>
+                <span className="text-muted-foreground">{tJournal("holdingTime")}</span>
                 <span className="font-medium">{holdingTimeDisplay}</span>
-                <span className="text-[10px] text-muted-foreground">(auto-calculated)</span>
+                <span className="text-[10px] text-muted-foreground">{tJournal("autoCalculated")}</span>
               </div>
             )}
 
             {/* Exit Reason */}
             <div className="space-y-1.5">
-              <Label className="text-xs">Exit Reason</Label>
+              <Label className="text-xs">{tJournal("exitReason")}</Label>
               <Textarea
                 value={exitReason}
                 onChange={(e) => setExitReason(e.target.value)}
-                placeholder="Why did you exit? Was it your plan?"
+                placeholder={tJournal("exitReasonPlaceholder")}
                 className="text-xs min-h-12"
               />
             </div>
 
             {/* Lessons */}
             <div className="space-y-1.5">
-              <Label className="text-xs">Lessons</Label>
+              <Label className="text-xs">{tJournal("lessons")}</Label>
               <Textarea
                 value={lessons}
                 onChange={(e) => setLessons(e.target.value)}
-                placeholder="What did you learn from this trade?"
+                placeholder={tJournal("lessonsPlaceholder")}
                 className="text-xs min-h-12"
               />
             </div>
@@ -1398,7 +1415,7 @@ function TradeJournalDialog({
             {/* Discipline Slider */}
             <div className="space-y-1.5">
               <Label className="text-xs">
-                Discipline — <span className="text-foreground font-semibold">{disciplineLevel}/10</span>
+                {tJournal("discipline")} — <span className="text-foreground font-semibold">{disciplineLevel}/10</span>
               </Label>
               <input
                 type="range"
@@ -1420,7 +1437,7 @@ function TradeJournalDialog({
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <Label className="text-xs">
-                  MAE <span className="text-muted-foreground font-normal">(Max Adverse Excursion)</span>
+                  {tJournal("mae")} <span className="text-muted-foreground font-normal">({tJournal("maeDesc")})</span>
                 </Label>
                 <Input
                   value={mae}
@@ -1432,12 +1449,12 @@ function TradeJournalDialog({
                   className="h-8 text-xs"
                 />
                 <p className="text-[10px] text-muted-foreground leading-tight">
-                  The maximum unrealized loss during the trade — how far price moved against you before exit.
+                  {tJournal("maeTip")}
                 </p>
               </div>
               <div className="space-y-1.5">
                 <Label className="text-xs">
-                  MFE <span className="text-muted-foreground font-normal">(Max Favorable Excursion)</span>
+                  {tJournal("mfe")} <span className="text-muted-foreground font-normal">({tJournal("mfeDesc")})</span>
                 </Label>
                 <Input
                   value={mfe}
@@ -1449,7 +1466,7 @@ function TradeJournalDialog({
                   className="h-8 text-xs"
                 />
                 <p className="text-[10px] text-muted-foreground leading-tight">
-                  The maximum unrealized profit during the trade — how far price moved in your favor before exit.
+                  {tJournal("mfeTip")}
                 </p>
               </div>
             </div>
@@ -1458,10 +1475,10 @@ function TradeJournalDialog({
 
         <DialogFooter>
           <DialogClose render={<Button variant="outline" size="sm" />}>
-            Cancel
+            {tc("cancel")}
           </DialogClose>
           <Button size="sm" onClick={handleSave} disabled={isPending}>
-            {isPending ? "Saving..." : "Save Journal"}
+            {isPending ? tc("saving") : tJournal("saveJournal")}
           </Button>
         </DialogFooter>
       </DialogContent>

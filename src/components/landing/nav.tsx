@@ -10,9 +10,11 @@ import {
   X,
 } from "lucide-react";
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 
 export function LandingNav() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const t = useTranslations("landing.nav");
 
   return (
     <nav className="sticky top-0 z-50 border-b border-border bg-background/90 backdrop-blur-xl">
@@ -34,19 +36,19 @@ export function LandingNav() {
               href="#features"
               className="text-sm text-muted-foreground transition-colors hover:text-foreground"
             >
-              Features
+              {t("features")}
             </a>
             <a
               href="#analytics"
               className="text-sm text-muted-foreground transition-colors hover:text-foreground"
             >
-              Analytics
+              {t("analytics")}
             </a>
             <a
               href="#pricing"
               className="text-sm text-muted-foreground transition-colors hover:text-foreground"
             >
-              Pricing
+              {t("pricing")}
             </a>
           </div>
 
@@ -56,12 +58,12 @@ export function LandingNav() {
             <ThemeToggle />
             <Link href="/login">
               <Button variant="ghost" size="sm">
-                Log In
+                {t("login")}
               </Button>
             </Link>
             <Link href="/login">
               <Button size="sm" className="bg-foreground text-background hover:bg-foreground/90 border-0">
-                Get Started
+                {t("getStarted")}
               </Button>
             </Link>
           </div>
@@ -88,19 +90,19 @@ export function LandingNav() {
               href="#features"
               className="block rounded-lg px-3 py-2 text-sm text-muted-foreground hover:bg-muted"
             >
-              Features
+              {t("features")}
             </a>
             <a
               href="#analytics"
               className="block rounded-lg px-3 py-2 text-sm text-muted-foreground hover:bg-muted"
             >
-              Analytics
+              {t("analytics")}
             </a>
             <a
               href="#pricing"
               className="block rounded-lg px-3 py-2 text-sm text-muted-foreground hover:bg-muted"
             >
-              Pricing
+              {t("pricing")}
             </a>
             <div className="flex items-center gap-2 pt-4">
               <LanguageSwitcher />
@@ -109,12 +111,12 @@ export function LandingNav() {
             <div className="flex flex-col gap-2 pt-2">
               <Link href="/login">
                 <Button variant="ghost" size="sm" className="w-full">
-                  Log In
+                  {t("login")}
                 </Button>
               </Link>
               <Link href="/login">
                 <Button size="sm" className="w-full bg-foreground text-background hover:bg-foreground/90 border-0">
-                  Get Started
+                  {t("getStarted")}
                 </Button>
               </Link>
             </div>

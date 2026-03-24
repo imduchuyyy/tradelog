@@ -2,8 +2,11 @@
 
 import { signIn } from "next-auth/react";
 import { Button } from "@/components/ui/button";
+import { useTranslations } from "next-intl";
 
 export function LoginForm() {
+  const t = useTranslations("login");
+
   const handleGoogleLogin = () => {
     signIn("google", { callbackUrl: "/dashboard" });
   };
@@ -33,7 +36,7 @@ export function LoginForm() {
             fill="#EA4335"
           />
         </svg>
-        Continue with Google
+        {t("googleButton")}
       </Button>
 
       <div className="relative">
@@ -42,15 +45,14 @@ export function LoginForm() {
         </div>
         <div className="relative flex justify-center text-xs uppercase">
           <span className="bg-background px-2 text-muted-foreground">
-            Secure authentication
+            {t("secureAuth")}
           </span>
         </div>
       </div>
 
       <div className="rounded-[5px] border border-border bg-card p-4 text-center">
         <p className="text-sm text-muted-foreground">
-          New users get a <span className="font-semibold text-foreground">3-day free trial</span> with
-          full access to all features including AI-powered analytics.
+          {t("trial")}
         </p>
       </div>
     </div>

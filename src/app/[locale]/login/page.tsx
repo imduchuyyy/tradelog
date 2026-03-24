@@ -1,4 +1,4 @@
-import { setRequestLocale } from "next-intl/server";
+import { setRequestLocale, getTranslations } from "next-intl/server";
 import { LoginForm } from "@/components/auth/login-form";
 import { BarChart3 } from "lucide-react";
 import { Link } from "@/i18n/navigation";
@@ -18,6 +18,8 @@ export default async function LoginPage({
     redirect(`/${locale}/dashboard`);
   }
 
+  const t = await getTranslations("login");
+
   return (
     <div className="relative flex min-h-screen">
       {/* Left side - branding */}
@@ -32,35 +34,32 @@ export default async function LoginPage({
         </div>
 
         <div className="space-y-6">
-          <h1 className="text-4xl font-bold leading-tight">
-            Track. Analyze.
-            <br />
-            Improve.
+          <h1 className="text-4xl font-bold leading-tight whitespace-pre-line">
+            {t("tagline")}
           </h1>
           <p className="max-w-md text-lg text-muted-foreground">
-            Join traders who use AI-powered analytics to understand their edge
-            and consistently improve their trading performance.
+            {t("description")}
           </p>
 
           {/* Stats */}
           <div className="flex gap-8 pt-4">
             <div>
               <p className="text-3xl font-bold font-mono">20+</p>
-              <p className="text-sm text-muted-foreground">Trade metrics</p>
+              <p className="text-sm text-muted-foreground">{t("tradeMetrics")}</p>
             </div>
             <div>
               <p className="text-3xl font-bold font-mono">AI</p>
-              <p className="text-sm text-muted-foreground">Powered insights</p>
+              <p className="text-sm text-muted-foreground">{t("poweredInsights")}</p>
             </div>
             <div>
               <p className="text-3xl font-bold font-mono">10+</p>
-              <p className="text-sm text-muted-foreground">Exchanges</p>
+              <p className="text-sm text-muted-foreground">{t("exchangesSupported")}</p>
             </div>
           </div>
         </div>
 
         <p className="text-xs text-muted-foreground">
-          &copy; {new Date().getFullYear()} TradeLog. All rights reserved.
+          &copy; {new Date().getFullYear()} TradeLog. {t("rights")}
         </p>
       </div>
 
@@ -79,23 +78,23 @@ export default async function LoginPage({
 
           <div className="text-center">
             <h2 className="text-2xl font-bold tracking-tight">
-              Welcome back
+              {t("title")}
             </h2>
             <p className="mt-2 text-sm text-muted-foreground">
-              Sign in to your account to continue trading
+              {t("subtitle")}
             </p>
           </div>
 
           <LoginForm />
 
           <p className="text-center text-xs text-muted-foreground">
-            By signing in, you agree to our{" "}
+            {t("terms")}{" "}
             <a href="#" className="underline hover:text-foreground">
-              Terms of Service
+              {t("termsOfService")}
             </a>{" "}
-            and{" "}
+            {t("and")}{" "}
             <a href="#" className="underline hover:text-foreground">
-              Privacy Policy
+              {t("privacyPolicy")}
             </a>
           </p>
         </div>

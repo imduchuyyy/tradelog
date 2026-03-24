@@ -1,45 +1,50 @@
-export function LandingStats() {
+import { getTranslations } from "next-intl/server";
+
+export async function LandingStats() {
+  const t = await getTranslations("landing.stats");
+
+  const stats = [
+    {
+      label: t("performanceTracking"),
+      value: t("realTime"),
+      detail: t("instantPnl"),
+    },
+    {
+      label: t("tradeMetrics"),
+      value: "20+",
+      detail: t("fieldsPerTrade"),
+    },
+    {
+      label: t("aiInsights"),
+      value: "24/7",
+      detail: t("alwaysAvailable"),
+    },
+    {
+      label: t("exchanges"),
+      value: "10+",
+      detail: t("supportedPlatforms"),
+    },
+  ];
+
   return (
     <section id="analytics" className="relative px-4 py-24 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-5xl">
         {/* Section header */}
         <div className="text-center">
           <p className="text-sm font-medium uppercase tracking-widest text-success">
-            Analytics
+            {t("sectionLabel")}
           </p>
           <h2 className="mt-3 text-3xl font-bold tracking-tight sm:text-4xl">
-            Data-driven trading decisions
+            {t("title")}
           </h2>
           <p className="mx-auto mt-4 max-w-2xl text-muted-foreground">
-            Track the metrics that matter. Understand your edge and eliminate
-            emotional trading.
+            {t("subtitle")}
           </p>
         </div>
 
         {/* Stats grid */}
         <div className="mt-16 grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
-          {[
-            {
-              label: "Performance Tracking",
-              value: "Real-time",
-              detail: "Instant PnL updates",
-            },
-            {
-              label: "Trade Metrics",
-              value: "20+",
-              detail: "Fields per trade",
-            },
-            {
-              label: "AI Insights",
-              value: "24/7",
-              detail: "Always available",
-            },
-            {
-              label: "Exchanges",
-              value: "10+",
-              detail: "Supported platforms",
-            },
-          ].map((stat) => (
+          {stats.map((stat) => (
             <div
               key={stat.label}
               className="text-center"
@@ -61,19 +66,16 @@ export function LandingStats() {
           <div className="rounded-[6px] border border-border bg-card p-7">
             <div className="flex items-center gap-3 mb-4">
               <div className="h-2 w-2 rounded-full bg-success shadow-[0_0_10px_rgba(0,255,170,0.3)]" />
-              <span className="text-sm font-medium">AI Trade Analysis</span>
+              <span className="text-sm font-medium">{t("aiTradeAnalysis")}</span>
             </div>
             <div className="space-y-3 font-mono text-xs">
               <div className="rounded-[4px] bg-background border border-border p-3">
                 <span className="text-muted-foreground">&gt; </span>
-                <span>analyze my BTCUSDT trades this week</span>
+                <span>{t("aiPrompt")}</span>
               </div>
               <div className="rounded-[4px] bg-success/5 border border-success/10 p-3 text-muted-foreground leading-relaxed">
-                <span className="text-success font-semibold">TradeLog AI:</span>{" "}
-                You took 8 BTC trades this week with a 62.5% win rate. Your best
-                entries were on pullbacks to the 4H EMA21 (3/3 wins). Consider
-                avoiding counter-trend trades during high-volatility news
-                events - your 2 largest losses came from those setups.
+                <span className="text-success font-semibold">{t("aiResponseLabel")}</span>{" "}
+                {t("aiResponseText")}
               </div>
             </div>
           </div>
@@ -81,8 +83,8 @@ export function LandingStats() {
           {/* Setup tracking card */}
           <div className="rounded-[6px] border border-border bg-card p-7">
             <div className="flex items-center justify-between mb-4">
-              <span className="text-sm font-medium">Setup Performance</span>
-              <span className="text-xs text-muted-foreground font-mono">Last 30 days</span>
+              <span className="text-sm font-medium">{t("setupPerformance")}</span>
+              <span className="text-xs text-muted-foreground font-mono">{t("last30Days")}</span>
             </div>
             <div className="space-y-3">
               {[
@@ -123,7 +125,7 @@ export function LandingStats() {
                     {setup.winRate}%
                   </div>
                   <div className="w-16 text-right text-xs text-muted-foreground">
-                    {setup.trades} trades
+                    {setup.trades} {t("trades")}
                   </div>
                 </div>
               ))}

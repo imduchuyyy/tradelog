@@ -6,84 +6,60 @@ import {
   Link2,
   Shield,
 } from "lucide-react";
+import { getTranslations } from "next-intl/server";
 
-const features = [
-  {
-    icon: FileText,
-    title: "Comprehensive Trade Journal",
-    description:
-      "Record every detail of your trades - entry/exit prices, PnL, setup reasons, psychology, market conditions, and more.",
-  },
-  {
-    icon: Brain,
-    title: "AI-Powered Analytics",
-    description:
-      "Chat with AI to get insights about your trading patterns, identify weaknesses, and receive personalized improvement suggestions.",
-  },
-  {
-    icon: BarChart3,
-    title: "Advanced Dashboard",
-    description:
-      "Visualize your performance with real-time analytics, equity curves, win rates, and risk-reward ratios at a glance.",
-  },
-  {
-    icon: Calendar,
-    title: "PnL Calendar",
-    description:
-      "See your daily profits and losses on an intuitive calendar view. Spot winning and losing streaks instantly.",
-  },
-  {
-    icon: Link2,
-    title: "Exchange Integration",
-    description:
-      "Connect multiple exchanges via API keys. Import trades automatically from Binance, Bybit, OKX, and more.",
-  },
-  {
-    icon: Shield,
-    title: "Custom Trade Setups",
-    description:
-      "Create and manage your favorite trading setups. Tag trades with setups to track which strategies perform best.",
-  },
-];
+const featureIcons = [FileText, Brain, BarChart3, Calendar, Link2, Shield];
+const featureKeys = [
+  "journal",
+  "analytics",
+  "dashboard",
+  "calendar",
+  "exchanges",
+  "setups",
+] as const;
 
-export function LandingFeatures() {
+export async function LandingFeatures() {
+  const t = await getTranslations("landing.features");
+
   return (
     <section id="features" className="relative px-4 py-24 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-7xl">
         {/* Section header */}
         <div className="text-center">
           <p className="text-sm font-medium uppercase tracking-widest text-success">
-            Features
+            {t("sectionLabel")}
           </p>
           <h2 className="mt-3 text-3xl font-bold tracking-tight sm:text-4xl">
-            Everything you need to
+            {t("title")}
             <br />
             <span className="text-foreground">
-              master your trading
+              {t("titleHighlight")}
             </span>
           </h2>
           <p className="mx-auto mt-4 max-w-2xl text-muted-foreground">
-            A complete toolkit designed for serious traders who want to track,
-            analyze, and continuously improve their performance.
+            {t("subtitle")}
           </p>
         </div>
 
         {/* Features grid */}
         <div className="mt-16 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {features.map((feature) => (
-            <div
-              key={feature.title}
-              className="group relative rounded-[6px] border border-border bg-card p-7 transition-all hover:border-[#333333]"
-            >
-              <div className="mb-4 inline-flex h-10 w-10 items-center justify-center rounded-[5px] border border-border bg-background text-foreground">
-                <feature.icon className="h-5 w-5" />
+          {featureKeys.map((key, index) => {
+            const Icon = featureIcons[index];
+            return (
+              <div
+                key={key}
+                className="group relative rounded-[6px] border border-border bg-card p-7 transition-all hover:border-[#333333]"
+              >
+                <div className="mb-4 inline-flex h-10 w-10 items-center justify-center rounded-[5px] border border-border bg-background text-foreground">
+                  <Icon className="h-5 w-5" />
+                </div>
+                <h3 className="text-base font-semibold">{t(key)}</h3>
+                <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+                  {t(`${key}Desc`)}
+                </p>
               </div>
-              <h3 className="text-base font-semibold">{feature.title}</h3>
-              <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                {feature.description}
-              </p>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
     </section>

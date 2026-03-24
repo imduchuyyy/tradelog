@@ -15,7 +15,6 @@ import { Globe } from "lucide-react";
 
 const localeLabels: Record<Locale, string> = {
   en: "English",
-  es: "Espanol",
   vi: "Tiếng Việt",
 };
 

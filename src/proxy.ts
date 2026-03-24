@@ -11,7 +11,7 @@ const authPaths = ["/login"];
 
 // Extract locale prefix from pathname (e.g. "/en/dashboard" -> "en")
 function getLocaleFromPath(pathname: string): string {
-  const match = pathname.match(/^\/(en|es)(\/|$)/);
+  const match = pathname.match(/^\/(en|vi)(\/|$)/);
   return match?.[1] || "en";
 }
 
@@ -29,7 +29,7 @@ export function proxy(request: NextRequest) {
     request.cookies.get("__Secure-authjs.session-token")?.value;
 
   // Strip locale prefix to check path
-  const pathWithoutLocale = pathname.replace(/^\/(en|es)/, "") || "/";
+  const pathWithoutLocale = pathname.replace(/^\/(en|vi)/, "") || "/";
   const locale = getLocaleFromPath(pathname);
 
   const isProtectedRoute = protectedPaths.some((p) =>

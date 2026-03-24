@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useTranslations } from "next-intl";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 interface CalendarTabProps {
@@ -12,6 +13,7 @@ interface CalendarTabProps {
 }
 
 export function CalendarTab({ trades }: CalendarTabProps) {
+  const t = useTranslations("dashboard.calendarTab");
   const [currentDate, setCurrentDate] = useState(new Date());
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
@@ -60,6 +62,8 @@ export function CalendarTab({ trades }: CalendarTabProps) {
     year: "numeric",
   });
 
+  const dayKeys = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"] as const;
+
   const days = [];
   // Empty cells for days before month starts
   for (let i = 0; i < startDay; i++) {
@@ -77,7 +81,7 @@ export function CalendarTab({ trades }: CalendarTabProps) {
         <Card className="border-border bg-card">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              Monthly PnL
+              {t("monthlyPnl")}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -94,7 +98,7 @@ export function CalendarTab({ trades }: CalendarTabProps) {
         <Card className="border-border bg-card">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              Trades This Month
+              {t("tradesThisMonth")}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -104,7 +108,7 @@ export function CalendarTab({ trades }: CalendarTabProps) {
         <Card className="border-border bg-card">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              Win Rate
+              {t("winRate")}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -127,16 +131,14 @@ export function CalendarTab({ trades }: CalendarTabProps) {
         <CardContent>
           <div className="grid grid-cols-7 gap-1">
             {/* Day headers */}
-            {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map(
-              (day) => (
-                <div
-                  key={day}
-                  className="pb-2 text-center text-xs font-medium text-muted-foreground uppercase tracking-wider"
-                >
-                  {day}
-                </div>
-              )
-            )}
+            {dayKeys.map((key) => (
+              <div
+                key={key}
+                className="pb-2 text-center text-xs font-medium text-muted-foreground uppercase tracking-wider"
+              >
+                {t(key)}
+              </div>
+            ))}
 
             {/* Calendar cells */}
             {days.map((day, idx) => {

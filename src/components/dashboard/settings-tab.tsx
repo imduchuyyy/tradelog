@@ -33,6 +33,8 @@ import {
   updateUserSettings,
 } from "@/app/actions";
 import { cn } from "@/lib/utils";
+import { useRouter, usePathname } from "@/i18n/navigation";
+import type { Locale } from "@/i18n/config";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 interface SettingsTabProps {
@@ -49,9 +51,8 @@ interface SettingsTabProps {
   exchanges: any[];
 }
 
-const LANGUAGES = [
+const LANGUAGES: { code: Locale; label: string }[] = [
   { code: "en", label: "English" },
-  { code: "es", label: "Español" },
   { code: "vi", label: "Tiếng Việt" },
 ];
 
@@ -67,6 +68,8 @@ export function SettingsTab({ user, exchanges }: SettingsTabProps) {
   const [showSecrets, setShowSecrets] = useState<Record<string, boolean>>({});
   const t = useTranslations("dashboard.settingsTab");
   const tCommon = useTranslations("common");
+  const router = useRouter();
+  const pathname = usePathname();
 
   const toggleSecret = (id: string) => {
     setShowSecrets((prev) => ({ ...prev, [id]: !prev[id] }));
@@ -83,31 +86,31 @@ export function SettingsTab({ user, exchanges }: SettingsTabProps) {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <form
-            action={async (formData) => {
-              await updateUserSettings(formData);
-            }}
-          >
-            <input type="hidden" name="theme" value={user.theme} />
-            <div className="flex gap-2">
-              {LANGUAGES.map((lang) => (
-                <button
-                  key={lang.code}
-                  type="submit"
-                  name="locale"
-                  value={lang.code}
-                  className={cn(
-                    "rounded-[5px] border px-4 py-2 text-sm font-medium transition-colors",
-                    user.locale === lang.code
-                      ? "border-foreground/30 bg-muted text-foreground"
-                      : "border-border bg-background text-muted-foreground hover:bg-muted hover:text-foreground"
-                  )}
-                >
-                  {lang.label}
-                </button>
-              ))}
-            </div>
-          </form>
+          <div className="flex gap-2">
+            {LANGUAGES.map((lang) => (
+              <button
+                key={lang.code}
+                type="button"
+                onClick={async () => {
+                  // Save to DB
+                  const formData = new FormData();
+                  formData.set("locale", lang.code);
+                  formData.set("theme", user.theme);
+                  await updateUserSettings(formData);
+                  // Navigate to change URL locale
+                  router.replace(pathname, { locale: lang.code });
+                }}
+                className={cn(
+                  "rounded-[5px] border px-4 py-2 text-sm font-medium transition-colors",
+                  user.locale === lang.code
+                    ? "border-foreground/30 bg-muted text-foreground"
+                    : "border-border bg-background text-muted-foreground hover:bg-muted hover:text-foreground"
+                )}
+              >
+                {lang.label}
+              </button>
+            ))}
+          </div>
         </CardContent>
       </Card>
 
@@ -189,7 +192,7 @@ export function SettingsTab({ user, exchanges }: SettingsTabProps) {
                     <option value="Coinbase">Coinbase</option>
                     <option value="Kraken">Kraken</option>
                     <option value="dYdX">dYdX</option>
-                    <option value="Other">Other</option>
+                    <option value="Other">{tCommon("other")}</option>
                   </select>
                 </div>
                 <div className="space-y-2">
@@ -198,7 +201,7 @@ export function SettingsTab({ user, exchanges }: SettingsTabProps) {
                     id="api-key"
                     name="apiKey"
                     type="password"
-                    placeholder="Your API key"
+                    placeholder={t("apiKeyPlaceholder")}
                     required
                   />
                 </div>
@@ -208,7 +211,7 @@ export function SettingsTab({ user, exchanges }: SettingsTabProps) {
                     id="api-secret"
                     name="apiSecret"
                     type="password"
-                    placeholder="Your API secret"
+                    placeholder={t("apiSecretPlaceholder")}
                     required
                   />
                 </div>
@@ -221,7 +224,7 @@ export function SettingsTab({ user, exchanges }: SettingsTabProps) {
                     id="passphrase"
                     name="passphrase"
                     type="password"
-                    placeholder="Required by some exchanges"
+                    placeholder={t("passphrasePlaceholder")}
                   />
                 </div>
                 <div className="rounded-[5px] border border-border bg-muted p-3">
@@ -331,7 +334,7 @@ export function SettingsTab({ user, exchanges }: SettingsTabProps) {
               {user.plan === "pro"
                 ? t("pro")
                 : user.plan === "trial"
-                ? "Trial"
+                ? t("trial")
                 : t("free")}
             </Badge>
           </div>

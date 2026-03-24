@@ -15,6 +15,7 @@ import {
 import { Edit, Plus, Trash2 } from "lucide-react";
 import { createSetup, updateSetup, deleteSetup } from "@/app/actions";
 import { cn } from "@/lib/utils";
+import { useTranslations } from "next-intl";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 interface SetupsTabProps {
@@ -34,6 +35,7 @@ const COLORS = [
 ];
 
 export function SetupsTab({ setups, trades }: SetupsTabProps) {
+  const t = useTranslations("dashboard.setupsTab");
   const [createOpen, setCreateOpen] = useState(false);
   const [editSetup, setEditSetup] = useState<any>(null);
 
@@ -66,9 +68,9 @@ export function SetupsTab({ setups, trades }: SetupsTabProps) {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-lg font-semibold">Trade Setups</h2>
+          <h2 className="text-lg font-semibold">{t("title")}</h2>
           <p className="text-sm text-muted-foreground">
-            Manage your setups to tag trades with strategy names
+            {t("subtitle")}
           </p>
         </div>
         <Dialog
@@ -84,11 +86,11 @@ export function SetupsTab({ setups, trades }: SetupsTabProps) {
             }
           >
             <Plus className="h-3.5 w-3.5" />
-            Add Setup
+            {t("addSetup")}
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>New Setup</DialogTitle>
+              <DialogTitle>{t("newSetup")}</DialogTitle>
             </DialogHeader>
             <form
               action={async (formData) => {
@@ -98,16 +100,16 @@ export function SetupsTab({ setups, trades }: SetupsTabProps) {
               className="space-y-4"
             >
               <div className="space-y-2">
-                <Label htmlFor="name">Name *</Label>
+                <Label htmlFor="name">{t("name")} *</Label>
                 <Input
                   id="name"
                   name="name"
-                  placeholder="e.g. EMA Pullback"
+                  placeholder={t("namePlaceholder")}
                   required
                 />
               </div>
               <div className="space-y-2">
-                <Label>Color</Label>
+                <Label>{t("color")}</Label>
                 <div className="flex gap-2">
                   {COLORS.map((color) => (
                     <label key={color} className="cursor-pointer">
@@ -131,7 +133,7 @@ export function SetupsTab({ setups, trades }: SetupsTabProps) {
                 type="submit"
                 className="w-full bg-foreground text-background hover:bg-foreground/90 border-0"
               >
-                Create Setup
+                {t("createSetup")}
               </Button>
             </form>
           </DialogContent>
@@ -147,7 +149,7 @@ export function SetupsTab({ setups, trades }: SetupsTabProps) {
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Edit Setup</DialogTitle>
+            <DialogTitle>{t("editSetup")}</DialogTitle>
           </DialogHeader>
           {editSetup && (
             <form
@@ -158,7 +160,7 @@ export function SetupsTab({ setups, trades }: SetupsTabProps) {
               className="space-y-4"
             >
               <div className="space-y-2">
-                <Label htmlFor="edit-name">Name *</Label>
+                <Label htmlFor="edit-name">{t("name")} *</Label>
                 <Input
                   id="edit-name"
                   name="name"
@@ -167,7 +169,7 @@ export function SetupsTab({ setups, trades }: SetupsTabProps) {
                 />
               </div>
               <div className="space-y-2">
-                <Label>Color</Label>
+                <Label>{t("color")}</Label>
                 <div className="flex gap-2">
                   {COLORS.map((color) => (
                     <label key={color} className="cursor-pointer">
@@ -193,7 +195,7 @@ export function SetupsTab({ setups, trades }: SetupsTabProps) {
                 type="submit"
                 className="w-full bg-foreground text-background hover:bg-foreground/90 border-0"
               >
-                Save Changes
+                {t("saveChanges")}
               </Button>
             </form>
           )}
@@ -205,8 +207,7 @@ export function SetupsTab({ setups, trades }: SetupsTabProps) {
         <Card className="border-border bg-card">
           <CardContent className="flex flex-col items-center justify-center py-12 text-center">
             <p className="text-sm text-muted-foreground">
-              No setups yet. Create your first trading setup to start tracking
-              performance by strategy.
+              {t("noSetups")}
             </p>
           </CardContent>
         </Card>
@@ -246,11 +247,11 @@ export function SetupsTab({ setups, trades }: SetupsTabProps) {
               <CardContent>
                 <div className="flex items-center gap-4">
                   <div>
-                    <p className="text-xs text-muted-foreground">Win Rate</p>
+                    <p className="text-xs text-muted-foreground">{t("winRate")}</p>
                     <p className="text-sm font-semibold font-mono">{setup.winRate}%</p>
                   </div>
                   <div>
-                    <p className="text-xs text-muted-foreground">PnL</p>
+                    <p className="text-xs text-muted-foreground">{t("pnl")}</p>
                     <p
                       className={cn(
                         "text-sm font-semibold font-mono",
@@ -261,7 +262,7 @@ export function SetupsTab({ setups, trades }: SetupsTabProps) {
                     </p>
                   </div>
                   <div>
-                    <p className="text-xs text-muted-foreground">Trades</p>
+                    <p className="text-xs text-muted-foreground">{t("trades")}</p>
                     <p className="text-sm font-semibold font-mono">
                       {setup.tradeCount}
                     </p>

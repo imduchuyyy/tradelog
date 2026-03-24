@@ -15,6 +15,7 @@ import { useChat } from "@ai-sdk/react";
 import { cn } from "@/lib/utils";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { useTranslations, useLocale } from "next-intl";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -64,6 +65,8 @@ function hasToolOutput(part: any): boolean {
 export function AIChatPanel({
   tradeContext,
 }: AIChatPanelProps) {
+  const t = useTranslations("dashboard.chat");
+  const locale = useLocale();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const initializedTradeContext = useRef<string | null>(null);
 
@@ -73,6 +76,7 @@ export function AIChatPanel({
     status,
   } = useChat({
     api: "/api/chat",
+    body: { locale },
   } as any) as any;
 
   const [input, setInput] = useState("");
@@ -102,6 +106,14 @@ export function AIChatPanel({
 
   const messageList = messages || [];
 
+  const suggestions = [
+    t("suggestion1"),
+    t("suggestion2"),
+    t("suggestion3"),
+    t("suggestion4"),
+    t("suggestion5"),
+  ];
+
   return (
     <div className="flex h-full flex-col bg-background relative overflow-hidden">
       {/* Messages */}
@@ -114,21 +126,14 @@ export function AIChatPanel({
             </div>
             <div className="space-y-1.5">
               <p className="font-semibold text-foreground text-sm">
-                AI Trade Analytics
+                {t("aiAnalytics")}
               </p>
               <p className="text-xs text-muted-foreground leading-relaxed">
-                Ask questions about your trading data. I can run SQL queries and
-                compute advanced metrics for you.
+                {t("aiDescription")}
               </p>
             </div>
             <div className="w-full space-y-1.5 mt-1">
-              {[
-                "What's my win rate by session?",
-                "Show me my best performing setups",
-                "Calculate my expectancy and profit factor",
-                "What's my max drawdown?",
-                "Analyze my performance on trending vs range markets",
-              ].map((suggestion) => (
+              {suggestions.map((suggestion) => (
                 <button
                   key={suggestion}
                   onClick={() => sendMessage({ text: suggestion })}
@@ -179,7 +184,7 @@ export function AIChatPanel({
                   const done = hasToolOutput(part);
 
                   if (toolName === "queryTrades") {
-                    const desc = part.input?.description || "Running query...";
+                    const desc = part.input?.description || t("suggestion1");
                     const rowCount = done ? part.output?.rowCount : null;
                     return (
                       <div
@@ -204,7 +209,7 @@ export function AIChatPanel({
                   }
 
                   if (toolName === "compute") {
-                    const desc = part.input?.description || "Computing...";
+                    const desc = part.input?.description || t("processing");
                     return (
                       <div
                         key={part.toolCallId}
@@ -234,12 +239,12 @@ export function AIChatPanel({
                       {done ? (
                         <>
                           <CheckCircle2 className="h-3.5 w-3.5 text-success" />
-                          <span>Done</span>
+                          <span>{t("done")}</span>
                         </>
                       ) : (
                         <>
                           <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                          <span>Processing...</span>
+                          <span>{t("processing")}</span>
                         </>
                       )}
                     </div>
@@ -291,7 +296,7 @@ export function AIChatPanel({
               }
             }}
             disabled={isLoading}
-            placeholder="Ask about your trading data..."
+            placeholder={t("placeholder")}
             className="flex-1 bg-transparent border-0 focus:ring-0 text-[13px] py-1.5 px-3 resize-none min-h-[38px] max-h-[140px] placeholder:text-muted-foreground/40 leading-relaxed ring-0 outline-none appearance-none"
             rows={1}
             autoFocus
