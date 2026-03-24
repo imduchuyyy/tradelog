@@ -206,12 +206,6 @@ export function DashboardShell({
               </Button>
             )}
 
-            {user.plan === "trial" && (
-              <Badge variant="outline" className="text-xs">
-                Trial: {trialDaysLeft}d left
-              </Badge>
-            )}
-
             {/* New trades notification */}
             {newTradeCount > 0 && (
               <div className="hidden md:flex items-center gap-1.5 rounded-full bg-success/10 border border-success/20 px-3 py-1">
