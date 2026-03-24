@@ -47,7 +47,7 @@ export function LoginForm() {
         </div>
       </div>
 
-      <div className="rounded-lg border border-border/40 bg-muted/30 p-4 text-center">
+      <div className="rounded-[5px] border border-border bg-card p-4 text-center">
         <p className="text-sm text-muted-foreground">
           New users get a <span className="font-semibold text-foreground">3-day free trial</span> with
           full access to all features including AI-powered analytics.

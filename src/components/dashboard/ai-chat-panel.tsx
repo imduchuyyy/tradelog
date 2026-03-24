@@ -13,6 +13,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { useChat } from "@ai-sdk/react";
 import { cn } from "@/lib/utils";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -101,14 +103,14 @@ export function AIChatPanel({
   const messageList = messages || [];
 
   return (
-    <div className="flex h-full flex-col bg-background/50 relative overflow-hidden">
+    <div className="flex h-full flex-col bg-background relative overflow-hidden">
       {/* Messages */}
       <div className="flex-1 overflow-y-auto p-4 space-y-5 scrollbar-hide pb-28">
         {/* Empty state */}
         {messageList.length === 0 && !tradeContext && (
-          <div className="bg-secondary/20 p-5 rounded-2xl text-sm text-center text-muted-foreground flex flex-col items-center gap-3 animate-in fade-in slide-in-from-bottom-2 duration-500">
-            <div className="h-11 w-11 rounded-2xl bg-primary/10 flex items-center justify-center">
-              <BarChart2 className="h-5 w-5 text-primary" />
+          <div className="bg-card border border-border p-5 rounded-[6px] text-sm text-center text-muted-foreground flex flex-col items-center gap-3 animate-in fade-in slide-in-from-bottom-2 duration-500">
+            <div className="h-11 w-11 rounded-[6px] border border-border bg-background flex items-center justify-center">
+              <BarChart2 className="h-5 w-5 text-foreground" />
             </div>
             <div className="space-y-1.5">
               <p className="font-semibold text-foreground text-sm">
@@ -130,7 +132,7 @@ export function AIChatPanel({
                 <button
                   key={suggestion}
                   onClick={() => sendMessage({ text: suggestion })}
-                  className="w-full text-left text-xs px-3 py-2 rounded-lg bg-card border border-border/40 text-muted-foreground hover:text-foreground hover:bg-secondary/40 transition-colors"
+                  className="w-full text-left text-xs px-3 py-2 rounded-[4px] bg-background border border-border text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
                 >
                   {suggestion}
                 </button>
@@ -156,12 +158,19 @@ export function AIChatPanel({
                 className={cn(
                   "max-w-[90%] px-4 py-3 text-[13px] leading-relaxed",
                   m.role === "user"
-                    ? "bg-primary text-primary-foreground rounded-2xl rounded-tr-none shadow-md"
-                    : "bg-card border border-border/50 rounded-2xl rounded-tl-none shadow-sm"
+                    ? "bg-foreground text-background rounded-[6px] rounded-tr-none"
+                    : "bg-card border border-border rounded-[6px] rounded-tl-none"
                 )}
               >
-                {text && (
+                {text && m.role === "user" && (
                   <span className="whitespace-pre-wrap">{text}</span>
+                )}
+                {text && m.role !== "user" && (
+                  <div className="prose-chat">
+                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                      {text}
+                    </ReactMarkdown>
+                  </div>
                 )}
 
                 {/* Tool UI Rendering */}
@@ -175,18 +184,18 @@ export function AIChatPanel({
                     return (
                       <div
                         key={part.toolCallId}
-                        className="mt-3 flex items-center gap-2.5 text-muted-foreground bg-blue-500/5 px-3 py-2 rounded-xl text-xs border border-blue-500/20"
+                        className="mt-3 flex items-center gap-2.5 text-muted-foreground bg-muted px-3 py-2 rounded-[4px] text-xs border border-border"
                       >
                         {done ? (
                           <>
-                            <Database className="h-3.5 w-3.5 text-blue-500" />
+                            <Database className="h-3.5 w-3.5 text-foreground" />
                             <span className="font-medium">
                               {desc} ({rowCount} row{rowCount !== 1 ? "s" : ""})
                             </span>
                           </>
                         ) : (
                           <>
-                            <Loader2 className="h-3.5 w-3.5 animate-spin text-blue-500" />
+                            <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
                             <span className="italic">{desc}</span>
                           </>
                         )}
@@ -199,16 +208,16 @@ export function AIChatPanel({
                     return (
                       <div
                         key={part.toolCallId}
-                        className="mt-3 flex items-center gap-2.5 text-muted-foreground bg-purple-500/5 px-3 py-2 rounded-xl text-xs border border-purple-500/20"
+                        className="mt-3 flex items-center gap-2.5 text-muted-foreground bg-muted px-3 py-2 rounded-[4px] text-xs border border-border"
                       >
                         {done ? (
                           <>
-                            <Calculator className="h-3.5 w-3.5 text-purple-500" />
+                            <Calculator className="h-3.5 w-3.5 text-foreground" />
                             <span className="font-medium">{desc}</span>
                           </>
                         ) : (
                           <>
-                            <Loader2 className="h-3.5 w-3.5 animate-spin text-purple-500" />
+                            <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
                             <span className="italic">{desc}</span>
                           </>
                         )}
@@ -224,7 +233,7 @@ export function AIChatPanel({
                     >
                       {done ? (
                         <>
-                          <CheckCircle2 className="h-3.5 w-3.5 text-green-500" />
+                          <CheckCircle2 className="h-3.5 w-3.5 text-success" />
                           <span>Done</span>
                         </>
                       ) : (
@@ -244,11 +253,11 @@ export function AIChatPanel({
         {/* Loading indicator */}
         {isLoading && messageList.length > 0 && messageList[messageList.length - 1]?.role !== "assistant" && (
           <div className="flex flex-col items-start gap-1">
-            <div className="rounded-2xl rounded-tl-none bg-card border border-border/50 px-4 py-3 shadow-sm">
+            <div className="rounded-[6px] rounded-tl-none bg-card border border-border px-4 py-3">
               <div className="flex gap-1.5 opacity-50">
-                <span className="h-2 w-2 rounded-full bg-blue-500 animate-bounce [animation-delay:0ms]" />
-                <span className="h-2 w-2 rounded-full bg-blue-500 animate-bounce [animation-delay:150ms]" />
-                <span className="h-2 w-2 rounded-full bg-blue-500 animate-bounce [animation-delay:300ms]" />
+                <span className="h-2 w-2 rounded-full bg-foreground animate-bounce [animation-delay:0ms]" />
+                <span className="h-2 w-2 rounded-full bg-foreground animate-bounce [animation-delay:150ms]" />
+                <span className="h-2 w-2 rounded-full bg-foreground animate-bounce [animation-delay:300ms]" />
               </div>
             </div>
           </div>
@@ -260,7 +269,7 @@ export function AIChatPanel({
       <div className="absolute bottom-0 left-0 right-0 pt-4 pb-4 px-3 bg-gradient-to-t from-background via-background to-transparent z-10 pointer-events-none">
         <form
           onSubmit={handleSubmit}
-          className="pointer-events-auto flex items-end gap-2 bg-card border border-border/80 rounded-2xl p-2 focus-within:ring-2 focus-within:ring-primary/20 focus-within:border-primary/40 transition-all shadow-xl shadow-black/5"
+          className="pointer-events-auto flex items-end gap-2 bg-card border border-border rounded-[6px] p-2 focus-within:border-[#333333] transition-all"
         >
           <textarea
             value={input || ""}
@@ -290,7 +299,7 @@ export function AIChatPanel({
           <Button
             type="submit"
             disabled={isLoading || !input?.trim()}
-            className="h-9 w-9 p-0 rounded-xl bg-primary text-primary-foreground shadow-lg shadow-primary/20 active:scale-90 transition-all shrink-0"
+            className="h-9 w-9 p-0 rounded-[5px] bg-foreground text-background active:scale-90 transition-all shrink-0"
           >
             {isLoading ? (
               <Loader2 className="h-4 w-4 animate-spin" />

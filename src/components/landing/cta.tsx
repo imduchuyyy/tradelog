@@ -6,10 +6,7 @@ export function LandingCTA() {
   return (
     <section id="pricing" className="relative px-4 py-24 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-4xl">
-        <div className="relative overflow-hidden rounded-2xl border border-border/40 bg-gradient-to-br from-blue-500/5 via-indigo-500/5 to-purple-500/5 p-8 sm:p-12 text-center backdrop-blur-sm">
-          {/* Decorative gradient */}
-          <div className="absolute inset-0 bg-gradient-to-br from-blue-500/[0.03] to-indigo-500/[0.03]" />
-
+        <div className="relative overflow-hidden rounded-[6px] border border-border bg-card p-8 sm:p-12 text-center">
           <div className="relative">
             <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
               Start improving your trading today
@@ -20,13 +17,13 @@ export function LandingCTA() {
             </p>
 
             {/* Pricing card */}
-            <div className="mx-auto mt-10 max-w-sm rounded-xl border border-border/60 bg-card/60 p-6 backdrop-blur-sm">
+            <div className="mx-auto mt-10 max-w-sm rounded-[6px] border border-border bg-background p-7">
               <p className="text-sm font-medium text-muted-foreground">
                 Start with
               </p>
-              <p className="mt-2 text-4xl font-bold">
+              <p className="mt-2 text-4xl font-bold font-mono">
                 Free
-                <span className="text-lg font-normal text-muted-foreground">
+                <span className="text-lg font-normal font-sans text-muted-foreground">
                   {" "}
                   / 3 days
                 </span>
@@ -41,14 +38,14 @@ export function LandingCTA() {
                   "Chat with AI assistant",
                 ].map((item) => (
                   <li key={item} className="flex items-center gap-2">
-                    <div className="h-1.5 w-1.5 rounded-full bg-blue-500" />
+                    <div className="h-1.5 w-1.5 rounded-full bg-success" />
                     {item}
                   </li>
                 ))}
               </ul>
 
               <Link href="/login" className="block mt-6">
-                <Button className="w-full h-11 bg-gradient-to-r from-blue-500 to-indigo-600 text-white hover:from-blue-600 hover:to-indigo-700 border-0">
+                <Button className="w-full h-11 bg-foreground text-background hover:bg-foreground/90 border-0">
                   Get Started Free
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>

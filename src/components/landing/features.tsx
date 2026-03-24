@@ -52,13 +52,13 @@ export function LandingFeatures() {
       <div className="mx-auto max-w-7xl">
         {/* Section header */}
         <div className="text-center">
-          <p className="text-sm font-medium uppercase tracking-widest text-blue-500">
+          <p className="text-sm font-medium uppercase tracking-widest text-success">
             Features
           </p>
           <h2 className="mt-3 text-3xl font-bold tracking-tight sm:text-4xl">
             Everything you need to
             <br />
-            <span className="bg-gradient-to-r from-blue-500 to-indigo-500 bg-clip-text text-transparent">
+            <span className="text-foreground">
               master your trading
             </span>
           </h2>
@@ -73,9 +73,9 @@ export function LandingFeatures() {
           {features.map((feature) => (
             <div
               key={feature.title}
-              className="group relative rounded-xl border border-border/40 bg-card/30 p-6 backdrop-blur-sm transition-all hover:border-border/80 hover:bg-card/60"
+              className="group relative rounded-[6px] border border-border bg-card p-7 transition-all hover:border-[#333333]"
             >
-              <div className="mb-4 inline-flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-blue-500/10 to-indigo-500/10 text-blue-500">
+              <div className="mb-4 inline-flex h-10 w-10 items-center justify-center rounded-[5px] border border-border bg-background text-foreground">
                 <feature.icon className="h-5 w-5" />
               </div>
               <h3 className="text-base font-semibold">{feature.title}</h3>

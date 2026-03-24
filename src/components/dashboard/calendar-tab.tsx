@@ -74,7 +74,7 @@ export function CalendarTab({ trades }: CalendarTabProps) {
     <div className="space-y-6">
       {/* Monthly summary */}
       <div className="grid gap-4 sm:grid-cols-3">
-        <Card className="border-border/40 bg-card/50">
+        <Card className="border-border bg-card">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
               Monthly PnL
@@ -83,38 +83,38 @@ export function CalendarTab({ trades }: CalendarTabProps) {
           <CardContent>
             <p
               className={cn(
-                "text-2xl font-bold",
-                monthPnl >= 0 ? "text-green-500" : "text-red-500"
+                "text-2xl font-bold font-mono",
+                monthPnl >= 0 ? "text-success" : "text-destructive"
               )}
             >
               {monthPnl >= 0 ? "+" : ""}${monthPnl.toFixed(2)}
             </p>
           </CardContent>
         </Card>
-        <Card className="border-border/40 bg-card/50">
+        <Card className="border-border bg-card">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
               Trades This Month
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-2xl font-bold">{monthTrades.length}</p>
+            <p className="text-2xl font-bold font-mono">{monthTrades.length}</p>
           </CardContent>
         </Card>
-        <Card className="border-border/40 bg-card/50">
+        <Card className="border-border bg-card">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
               Win Rate
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-2xl font-bold">{monthWinRate}%</p>
+            <p className="text-2xl font-bold font-mono">{monthWinRate}%</p>
           </CardContent>
         </Card>
       </div>
 
       {/* Calendar */}
-      <Card className="border-border/40 bg-card/50">
+      <Card className="border-border bg-card">
         <CardHeader className="flex flex-row items-center justify-between">
           <Button variant="ghost" size="icon" onClick={prevMonth}>
             <ChevronLeft className="h-4 w-4" />
@@ -131,7 +131,7 @@ export function CalendarTab({ trades }: CalendarTabProps) {
               (day) => (
                 <div
                   key={day}
-                  className="pb-2 text-center text-xs font-medium text-muted-foreground"
+                  className="pb-2 text-center text-xs font-medium text-muted-foreground uppercase tracking-wider"
                 >
                   {day}
                 </div>
@@ -154,19 +154,19 @@ export function CalendarTab({ trades }: CalendarTabProps) {
                 <div
                   key={dateKey}
                   className={cn(
-                    "relative flex min-h-[70px] flex-col items-center rounded-lg border p-1.5 text-sm transition-colors",
+                    "relative flex min-h-[70px] flex-col items-center rounded-[4px] border p-1.5 text-sm transition-colors",
                     isToday
-                      ? "border-blue-500/40 bg-blue-500/5"
-                      : "border-border/20",
-                    hasData && pnl > 0 && "bg-green-500/5",
-                    hasData && pnl < 0 && "bg-red-500/5"
+                      ? "border-foreground/20 bg-muted"
+                      : "border-border",
+                    hasData && pnl > 0 && "bg-success/5",
+                    hasData && pnl < 0 && "bg-destructive/5"
                   )}
                 >
                   <span
                     className={cn(
-                      "text-xs",
+                      "text-xs font-mono",
                       isToday
-                        ? "font-bold text-blue-500"
+                        ? "font-bold text-foreground"
                         : "text-muted-foreground"
                     )}
                   >
@@ -175,8 +175,8 @@ export function CalendarTab({ trades }: CalendarTabProps) {
                   {hasData && (
                     <span
                       className={cn(
-                        "mt-auto text-xs font-medium",
-                        pnl > 0 ? "text-green-500" : "text-red-500"
+                        "mt-auto text-xs font-mono font-medium",
+                        pnl > 0 ? "text-success" : "text-destructive"
                       )}
                     >
                       {pnl > 0 ? "+" : ""}${pnl.toFixed(0)}

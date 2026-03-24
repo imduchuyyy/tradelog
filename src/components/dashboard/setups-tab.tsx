@@ -79,7 +79,7 @@ export function SetupsTab({ setups, trades }: SetupsTabProps) {
             render={
               <Button
                 size="sm"
-                className="gap-2 bg-gradient-to-r from-blue-500 to-indigo-600 text-white border-0"
+                className="gap-2 bg-foreground text-background hover:bg-foreground/90 border-0"
               />
             }
           >
@@ -129,7 +129,7 @@ export function SetupsTab({ setups, trades }: SetupsTabProps) {
 
               <Button
                 type="submit"
-                className="w-full bg-gradient-to-r from-blue-500 to-indigo-600 text-white border-0"
+                className="w-full bg-foreground text-background hover:bg-foreground/90 border-0"
               >
                 Create Setup
               </Button>
@@ -191,7 +191,7 @@ export function SetupsTab({ setups, trades }: SetupsTabProps) {
 
               <Button
                 type="submit"
-                className="w-full bg-gradient-to-r from-blue-500 to-indigo-600 text-white border-0"
+                className="w-full bg-foreground text-background hover:bg-foreground/90 border-0"
               >
                 Save Changes
               </Button>
@@ -202,7 +202,7 @@ export function SetupsTab({ setups, trades }: SetupsTabProps) {
 
       {/* Setups grid */}
       {setupStats.length === 0 ? (
-        <Card className="border-border/40 bg-card/50">
+        <Card className="border-border bg-card">
           <CardContent className="flex flex-col items-center justify-center py-12 text-center">
             <p className="text-sm text-muted-foreground">
               No setups yet. Create your first trading setup to start tracking
@@ -215,7 +215,7 @@ export function SetupsTab({ setups, trades }: SetupsTabProps) {
           {setupStats.map((setup: any) => (
             <Card
               key={setup.id}
-              className="border-border/40 bg-card/50 overflow-hidden"
+              className="border-border bg-card overflow-hidden"
             >
               <div
                 className="h-1"
@@ -247,14 +247,14 @@ export function SetupsTab({ setups, trades }: SetupsTabProps) {
                 <div className="flex items-center gap-4">
                   <div>
                     <p className="text-xs text-muted-foreground">Win Rate</p>
-                    <p className="text-sm font-semibold">{setup.winRate}%</p>
+                    <p className="text-sm font-semibold font-mono">{setup.winRate}%</p>
                   </div>
                   <div>
                     <p className="text-xs text-muted-foreground">PnL</p>
                     <p
                       className={cn(
-                        "text-sm font-semibold",
-                        setup.totalPnl >= 0 ? "text-green-500" : "text-red-500"
+                        "text-sm font-semibold font-mono",
+                        setup.totalPnl >= 0 ? "text-success" : "text-destructive"
                       )}
                     >
                       ${setup.totalPnl.toFixed(2)}
@@ -262,7 +262,7 @@ export function SetupsTab({ setups, trades }: SetupsTabProps) {
                   </div>
                   <div>
                     <p className="text-xs text-muted-foreground">Trades</p>
-                    <p className="text-sm font-semibold">
+                    <p className="text-sm font-semibold font-mono">
                       {setup.tradeCount}
                     </p>
                   </div>

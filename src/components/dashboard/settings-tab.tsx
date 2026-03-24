@@ -75,10 +75,10 @@ export function SettingsTab({ user, exchanges }: SettingsTabProps) {
   return (
     <div className="space-y-6 max-w-2xl">
       {/* Language */}
-      <Card className="border-border/40 bg-card/50">
+      <Card className="border-border bg-card">
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-base">
-            <Globe className="h-4 w-4 text-blue-500" />
+            <Globe className="h-4 w-4 text-muted-foreground" />
             {t("language")}
           </CardTitle>
         </CardHeader>
@@ -97,10 +97,10 @@ export function SettingsTab({ user, exchanges }: SettingsTabProps) {
                   name="locale"
                   value={lang.code}
                   className={cn(
-                    "rounded-lg border px-4 py-2 text-sm font-medium transition-colors",
+                    "rounded-[5px] border px-4 py-2 text-sm font-medium transition-colors",
                     user.locale === lang.code
-                      ? "border-blue-500/50 bg-blue-500/10 text-blue-500"
-                      : "border-border/40 bg-card/30 text-muted-foreground hover:bg-muted hover:text-foreground"
+                      ? "border-foreground/30 bg-muted text-foreground"
+                      : "border-border bg-background text-muted-foreground hover:bg-muted hover:text-foreground"
                   )}
                 >
                   {lang.label}
@@ -112,10 +112,10 @@ export function SettingsTab({ user, exchanges }: SettingsTabProps) {
       </Card>
 
       {/* Theme */}
-      <Card className="border-border/40 bg-card/50">
+      <Card className="border-border bg-card">
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-base">
-            <Moon className="h-4 w-4 text-indigo-500" />
+            <Moon className="h-4 w-4 text-muted-foreground" />
             {t("theme")}
           </CardTitle>
         </CardHeader>
@@ -128,10 +128,10 @@ export function SettingsTab({ user, exchanges }: SettingsTabProps) {
                   key={t.code}
                   onClick={() => setTheme(t.code)}
                   className={cn(
-                    "flex items-center gap-2 rounded-lg border px-4 py-2 text-sm font-medium transition-colors",
+                    "flex items-center gap-2 rounded-[5px] border px-4 py-2 text-sm font-medium transition-colors",
                     currentTheme === t.code
-                      ? "border-indigo-500/50 bg-indigo-500/10 text-indigo-500"
-                      : "border-border/40 bg-card/30 text-muted-foreground hover:bg-muted hover:text-foreground"
+                      ? "border-foreground/30 bg-muted text-foreground"
+                      : "border-border bg-background text-muted-foreground hover:bg-muted hover:text-foreground"
                   )}
                 >
                   <Icon className="h-3.5 w-3.5" />
@@ -144,10 +144,10 @@ export function SettingsTab({ user, exchanges }: SettingsTabProps) {
       </Card>
 
       {/* Exchanges */}
-      <Card className="border-border/40 bg-card/50">
+      <Card className="border-border bg-card">
         <CardHeader className="flex flex-row items-center justify-between pb-3">
           <CardTitle className="flex items-center gap-2 text-base">
-            <Link2 className="h-4 w-4 text-purple-500" />
+            <Link2 className="h-4 w-4 text-muted-foreground" />
             {t("exchanges")}
           </CardTitle>
           <Dialog open={addExchangeOpen} onOpenChange={setAddExchangeOpen}>
@@ -155,7 +155,7 @@ export function SettingsTab({ user, exchanges }: SettingsTabProps) {
               render={
                 <Button
                   size="sm"
-                  className="gap-2 bg-gradient-to-r from-blue-500 to-indigo-600 text-white border-0"
+                  className="gap-2 bg-foreground text-background hover:bg-foreground/90 border-0"
                 />
               }
             >
@@ -179,7 +179,7 @@ export function SettingsTab({ user, exchanges }: SettingsTabProps) {
                     id="exchange-name"
                     name="name"
                     required
-                    className="flex h-8 w-full rounded-lg border border-border bg-background px-3 text-sm"
+                    className="flex h-8 w-full rounded-[5px] border border-border bg-background px-3 text-sm"
                   >
                     <option value="Binance">Binance</option>
                     <option value="Bybit">Bybit</option>
@@ -224,14 +224,14 @@ export function SettingsTab({ user, exchanges }: SettingsTabProps) {
                     placeholder="Required by some exchanges"
                   />
                 </div>
-                <div className="rounded-lg border border-yellow-500/20 bg-yellow-500/5 p-3">
-                  <p className="text-xs text-yellow-600 dark:text-yellow-400">
+                <div className="rounded-[5px] border border-border bg-muted p-3">
+                  <p className="text-xs text-muted-foreground">
                     {t("apiWarning")}
                   </p>
                 </div>
                 <Button
                   type="submit"
-                  className="w-full bg-gradient-to-r from-blue-500 to-indigo-600 text-white border-0"
+                  className="w-full bg-foreground text-background hover:bg-foreground/90 border-0"
                 >
                   {t("connectButton")}
                 </Button>
@@ -252,11 +252,11 @@ export function SettingsTab({ user, exchanges }: SettingsTabProps) {
               {exchanges.map((exchange: any) => (
                 <div
                   key={exchange.id}
-                  className="flex items-center justify-between rounded-lg border border-border/40 bg-card/30 p-3"
+                  className="flex items-center justify-between rounded-[5px] border border-border bg-background p-3"
                 >
                   <div className="flex items-center gap-3">
-                    <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-purple-500/10">
-                      <Link2 className="h-4 w-4 text-purple-500" />
+                    <div className="flex h-9 w-9 items-center justify-center rounded-[5px] border border-border bg-card">
+                      <Link2 className="h-4 w-4 text-muted-foreground" />
                     </div>
                     <div>
                       <p className="text-sm font-medium">{exchange.name}</p>
@@ -282,7 +282,7 @@ export function SettingsTab({ user, exchanges }: SettingsTabProps) {
                   <div className="flex items-center gap-2">
                     <Badge
                       variant="outline"
-                      className="text-xs border-green-500/30 text-green-500"
+                      className="text-xs border-success/30 text-success"
                     >
                       {t("connected")}
                     </Badge>
@@ -305,7 +305,7 @@ export function SettingsTab({ user, exchanges }: SettingsTabProps) {
       </Card>
 
       {/* Account Info */}
-      <Card className="border-border/40 bg-card/50">
+      <Card className="border-border bg-card">
         <CardHeader className="pb-3">
           <CardTitle className="text-base">{t("account")}</CardTitle>
         </CardHeader>
@@ -314,7 +314,7 @@ export function SettingsTab({ user, exchanges }: SettingsTabProps) {
             <span className="text-sm text-muted-foreground">{t("email")}</span>
             <span className="text-sm">{user.email}</span>
           </div>
-          <Separator className="bg-border/40" />
+          <Separator className="bg-border" />
           <div className="flex items-center justify-between">
             <span className="text-sm text-muted-foreground">{t("plan")}</span>
             <Badge
@@ -322,9 +322,9 @@ export function SettingsTab({ user, exchanges }: SettingsTabProps) {
               className={cn(
                 "text-xs",
                 user.plan === "pro"
-                  ? "border-green-500/30 text-green-500"
+                  ? "border-success/30 text-success"
                   : user.plan === "trial"
-                  ? "border-blue-500/30 text-blue-500"
+                  ? "border-border text-foreground"
                   : "border-border"
               )}
             >
@@ -337,12 +337,12 @@ export function SettingsTab({ user, exchanges }: SettingsTabProps) {
           </div>
           {user.plan === "trial" && user.trialEndsAt && (
             <>
-              <Separator className="bg-border/40" />
+              <Separator className="bg-border" />
               <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">
                   {t("trialEnds")}
                 </span>
-                <span className="text-sm">
+                <span className="text-sm font-mono">
                   {new Date(user.trialEndsAt).toLocaleDateString()}
                 </span>
               </div>

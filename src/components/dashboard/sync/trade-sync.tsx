@@ -126,8 +126,8 @@ export function TradeSync({
     <>
       {/* Sync indicator */}
       {syncing && (
-        <div className="fixed bottom-20 right-4 z-40 flex items-center gap-2 rounded-full bg-card border border-border/60 px-4 py-2 shadow-lg md:bottom-4">
-          <Loader2 className="h-3.5 w-3.5 animate-spin text-blue-500" />
+        <div className="fixed bottom-20 right-4 z-40 flex items-center gap-2 rounded-full bg-card border border-border px-4 py-2 md:bottom-4">
+          <Loader2 className="h-3.5 w-3.5 animate-spin text-foreground" />
           <span className="text-xs text-muted-foreground">
             Syncing trades...
           </span>
@@ -136,17 +136,17 @@ export function TradeSync({
 
       {/* Sync success */}
       {syncSuccess && !syncing && (
-        <div className="fixed bottom-20 right-4 z-40 flex items-center gap-2 rounded-full bg-card border border-emerald-500/30 px-4 py-2 shadow-lg md:bottom-4">
-          <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
-          <span className="text-xs text-emerald-600">{syncSuccess}</span>
+        <div className="fixed bottom-20 right-4 z-40 flex items-center gap-2 rounded-full bg-card border border-border px-4 py-2 md:bottom-4">
+          <CheckCircle2 className="h-3.5 w-3.5 text-success" />
+          <span className="text-xs text-success">{syncSuccess}</span>
         </div>
       )}
 
       {/* Sync error */}
       {syncError && !syncing && (
-        <div className="fixed bottom-20 right-4 z-40 flex items-center gap-2 rounded-full bg-card border border-red-500/30 px-4 py-2 shadow-lg md:bottom-4">
-          <AlertCircle className="h-3.5 w-3.5 text-red-500" />
-          <span className="text-xs text-red-500">{syncError}</span>
+        <div className="fixed bottom-20 right-4 z-40 flex items-center gap-2 rounded-full bg-card border border-border px-4 py-2 md:bottom-4">
+          <AlertCircle className="h-3.5 w-3.5 text-destructive" />
+          <span className="text-xs text-destructive">{syncError}</span>
           <button
             onClick={() => {
               setSyncError(null);

@@ -332,7 +332,7 @@ export function DashboardTab({ trades, setups = [], onOpenChat }: DashboardTabPr
     };
   }, [trades, filters]);
 
-  const pnlColor = (val: number) => (val >= 0 ? "text-green-500" : "text-red-500");
+  const pnlColor = (val: number) => (val >= 0 ? "text-success" : "text-destructive");
   const formatMoney = (val: number) => `${val >= 0 ? "+" : "-"}$${Math.abs(val).toFixed(2)}`;
 
   const formatHoldingTime = (minutes: number | null | undefined) => {
@@ -375,7 +375,7 @@ export function DashboardTab({ trades, setups = [], onOpenChat }: DashboardTabPr
 
       {/* Power Filters Panel */}
       {showFilters && (
-        <Card className="bg-card/40 border-border/30">
+        <Card className="bg-card border-border">
           <CardContent className="pt-5 pb-4">
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3">
               {/* Symbol */}
@@ -565,31 +565,31 @@ export function DashboardTab({ trades, setups = [], onOpenChat }: DashboardTabPr
       )}
 
       {/* Top Stats — 8 cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3">
-        <Card className="bg-card/40 border-border/20 shadow-sm">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <Card className="bg-card border-border">
           <CardContent className="p-3">
             <p className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider">Trades</p>
-            <p className="text-xl font-bold text-blue-500 mt-1">{metrics.totalTrades}</p>
+            <p className="text-xl font-bold text-foreground mt-1">{metrics.totalTrades}</p>
             <p className="text-[9px] text-muted-foreground">{metrics.openTrades} open / {metrics.closedTrades} closed</p>
           </CardContent>
         </Card>
 
-        <Card className="bg-card/40 border-border/20 shadow-sm">
+        <Card className="bg-card border-border">
           <CardContent className="p-3">
             <p className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider">Win Rate</p>
-            <p className="text-xl font-bold text-green-500 mt-1">{metrics.winRate.toFixed(1)}%</p>
+            <p className="text-xl font-bold text-success mt-1">{metrics.winRate.toFixed(1)}%</p>
             <p className="text-[9px] text-muted-foreground">{metrics.wins}W / {metrics.losses}L</p>
           </CardContent>
         </Card>
 
-        <Card className="bg-card/40 border-border/20 shadow-sm">
+        <Card className="bg-card border-border">
           <CardContent className="p-3">
             <p className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider">Total PnL</p>
             <p className={cn("text-xl font-bold mt-1", pnlColor(metrics.totalPnl))}>{formatMoney(metrics.totalPnl)}</p>
           </CardContent>
         </Card>
 
-        <Card className="bg-card/40 border-border/20 shadow-sm">
+        <Card className="bg-card border-border">
           <CardContent className="p-3">
             <p className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider">Expectancy</p>
             <p className={cn("text-xl font-bold mt-1", pnlColor(metrics.expectancy))}>{formatMoney(metrics.expectancy)}</p>
@@ -597,31 +597,31 @@ export function DashboardTab({ trades, setups = [], onOpenChat }: DashboardTabPr
           </CardContent>
         </Card>
 
-        <Card className="bg-card/40 border-border/20 shadow-sm">
+        <Card className="bg-card border-border">
           <CardContent className="p-3">
             <p className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider">Profit Factor</p>
-            <p className="text-xl font-bold text-purple-500 mt-1">{metrics.profitFactor.toFixed(2)}</p>
+            <p className="text-xl font-bold text-muted-foreground mt-1">{metrics.profitFactor.toFixed(2)}</p>
           </CardContent>
         </Card>
 
-        <Card className="bg-card/40 border-border/20 shadow-sm">
+        <Card className="bg-card border-border">
           <CardContent className="p-3">
             <p className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider">Max Drawdown</p>
-            <p className="text-xl font-bold text-red-500 mt-1">-${metrics.maxDrawdown.toFixed(2)}</p>
+            <p className="text-xl font-bold text-destructive mt-1">-${metrics.maxDrawdown.toFixed(2)}</p>
           </CardContent>
         </Card>
 
-        <Card className="bg-card/40 border-border/20 shadow-sm">
+        <Card className="bg-card border-border">
           <CardContent className="p-3">
             <p className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider">R:R Ratio</p>
-            <p className="text-xl font-bold text-purple-500 mt-1">{metrics.riskReward.toFixed(2)}x</p>
+            <p className="text-xl font-bold text-muted-foreground mt-1">{metrics.riskReward.toFixed(2)}x</p>
           </CardContent>
         </Card>
 
-        <Card className="bg-card/40 border-border/20 shadow-sm">
+        <Card className="bg-card border-border">
           <CardContent className="p-3">
             <p className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider">Streak</p>
-            <p className={cn("text-xl font-bold mt-1", metrics.currentStreak >= 0 ? "text-green-500" : "text-red-500")}>
+            <p className={cn("text-xl font-bold mt-1", metrics.currentStreak >= 0 ? "text-success" : "text-destructive")}>
               {metrics.currentStreak > 0 ? `+${metrics.currentStreak}` : metrics.currentStreak}
             </p>
             <p className="text-[9px] text-muted-foreground">max W{metrics.maxWinStreak} / L{metrics.maxLossStreak}</p>
@@ -632,22 +632,22 @@ export function DashboardTab({ trades, setups = [], onOpenChat }: DashboardTabPr
       {/* Charts Row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Cumulative PnL */}
-        <Card className="bg-card/40 border-border/20 shadow-sm">
+        <Card className="bg-card border-border">
           <CardHeader className="pb-2 pt-4 px-4">
             <CardTitle className="text-sm font-semibold flex items-center gap-2">
-              <TrendingUp className="h-4 w-4 text-blue-500" />
+              <TrendingUp className="h-4 w-4 text-foreground" />
               Cumulative PnL
             </CardTitle>
           </CardHeader>
           <CardContent className="px-2 pb-3">
             {chartsData.cumulative.length > 1 ? (
-              <ChartContainer config={{ pnl: { label: "PnL", color: "hsl(var(--chart-1))" } }} className="h-48 w-full">
+              <ChartContainer config={{ pnl: { label: "PnL", color: "#00ffaa" } }} className="h-48 w-full">
                 <LineChart data={chartsData.cumulative}>
-                  <CartesianGrid strokeDasharray="3 3" className="stroke-border/30" />
-                  <XAxis dataKey="date" tick={{ fontSize: 10 }} />
-                  <YAxis tick={{ fontSize: 10 }} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="#222222" />
+                  <XAxis dataKey="date" tick={{ fontSize: 10, fill: "#666666" }} stroke="#333333" />
+                  <YAxis tick={{ fontSize: 10, fill: "#666666" }} stroke="#333333" />
                   <ChartTooltip content={<ChartTooltipContent />} />
-                  <Line type="monotone" dataKey="pnl" stroke="var(--color-pnl)" strokeWidth={2} dot={false} />
+                  <Line type="monotone" dataKey="pnl" stroke="#00ffaa" strokeWidth={2} dot={false} />
                 </LineChart>
               </ChartContainer>
             ) : (
@@ -657,22 +657,22 @@ export function DashboardTab({ trades, setups = [], onOpenChat }: DashboardTabPr
         </Card>
 
         {/* Win Rate Over Time */}
-        <Card className="bg-card/40 border-border/20 shadow-sm">
+        <Card className="bg-card border-border">
           <CardHeader className="pb-2 pt-4 px-4">
             <CardTitle className="text-sm font-semibold flex items-center gap-2">
-              <Percent className="h-4 w-4 text-green-500" />
+              <Percent className="h-4 w-4 text-success" />
               Win Rate Over Time
             </CardTitle>
           </CardHeader>
           <CardContent className="px-2 pb-3">
             {chartsData.winRateData.length > 1 ? (
-              <ChartContainer config={{ winRate: { label: "Win Rate %", color: "hsl(var(--chart-2))" } }} className="h-48 w-full">
+              <ChartContainer config={{ winRate: { label: "Win Rate %", color: "#00ffaa" } }} className="h-48 w-full">
                 <LineChart data={chartsData.winRateData}>
-                  <CartesianGrid strokeDasharray="3 3" className="stroke-border/30" />
-                  <XAxis dataKey="date" tick={{ fontSize: 10 }} />
-                  <YAxis domain={[0, 100]} tick={{ fontSize: 10 }} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="#222222" />
+                  <XAxis dataKey="date" tick={{ fontSize: 10, fill: "#666666" }} stroke="#333333" />
+                  <YAxis domain={[0, 100]} tick={{ fontSize: 10, fill: "#666666" }} stroke="#333333" />
                   <ChartTooltip content={<ChartTooltipContent />} />
-                  <Line type="monotone" dataKey="winRate" stroke="var(--color-winRate)" strokeWidth={2} dot={false} />
+                  <Line type="monotone" dataKey="winRate" stroke="#00ffaa" strokeWidth={2} dot={false} />
                 </LineChart>
               </ChartContainer>
             ) : (
@@ -682,24 +682,24 @@ export function DashboardTab({ trades, setups = [], onOpenChat }: DashboardTabPr
         </Card>
 
         {/* Setup Performance */}
-        <Card className="bg-card/40 border-border/20 shadow-sm">
+        <Card className="bg-card border-border">
           <CardHeader className="pb-2 pt-4 px-4">
             <CardTitle className="text-sm font-semibold flex items-center gap-2">
-              <Zap className="h-4 w-4 text-amber-500" />
+              <Zap className="h-4 w-4 text-foreground" />
               Performance by Setup
             </CardTitle>
           </CardHeader>
           <CardContent className="px-2 pb-3">
             {chartsData.setupsData.length > 0 ? (
-              <ChartContainer config={{ pnl: { label: "PnL", color: "hsl(var(--chart-3))" } }} className="h-48 w-full">
+              <ChartContainer config={{ pnl: { label: "PnL", color: "#ffffff" } }} className="h-48 w-full">
                 <BarChart data={chartsData.setupsData}>
-                  <CartesianGrid strokeDasharray="3 3" className="stroke-border/30" />
-                  <XAxis dataKey="name" tick={{ fontSize: 9 }} />
-                  <YAxis tick={{ fontSize: 10 }} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="#222222" />
+                  <XAxis dataKey="name" tick={{ fontSize: 9, fill: "#666666" }} stroke="#333333" />
+                  <YAxis tick={{ fontSize: 10, fill: "#666666" }} stroke="#333333" />
                   <ChartTooltip content={<ChartTooltipContent />} />
                   <Bar dataKey="pnl" radius={[4, 4, 0, 0]}>
                     {chartsData.setupsData.map((entry, i) => (
-                      <Cell key={i} fill={entry.pnl >= 0 ? "hsl(142, 76%, 36%)" : "hsl(0, 84%, 60%)"} />
+                      <Cell key={i} fill={entry.pnl >= 0 ? "#00ffaa" : "#ef4444"} />
                     ))}
                   </Bar>
                 </BarChart>
@@ -711,24 +711,24 @@ export function DashboardTab({ trades, setups = [], onOpenChat }: DashboardTabPr
         </Card>
 
         {/* Session Performance */}
-        <Card className="bg-card/40 border-border/20 shadow-sm">
+        <Card className="bg-card border-border">
           <CardHeader className="pb-2 pt-4 px-4">
             <CardTitle className="text-sm font-semibold flex items-center gap-2">
-              <Clock className="h-4 w-4 text-indigo-500" />
+              <Clock className="h-4 w-4 text-muted-foreground" />
               Performance by Session
             </CardTitle>
           </CardHeader>
           <CardContent className="px-2 pb-3">
             {chartsData.sessionData.length > 0 ? (
-              <ChartContainer config={{ pnl: { label: "PnL", color: "hsl(var(--chart-4))" } }} className="h-48 w-full">
+              <ChartContainer config={{ pnl: { label: "PnL", color: "#ffffff" } }} className="h-48 w-full">
                 <BarChart data={chartsData.sessionData}>
-                  <CartesianGrid strokeDasharray="3 3" className="stroke-border/30" />
-                  <XAxis dataKey="name" tick={{ fontSize: 9 }} />
-                  <YAxis tick={{ fontSize: 10 }} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="#222222" />
+                  <XAxis dataKey="name" tick={{ fontSize: 9, fill: "#666666" }} stroke="#333333" />
+                  <YAxis tick={{ fontSize: 10, fill: "#666666" }} stroke="#333333" />
                   <ChartTooltip content={<ChartTooltipContent />} />
                   <Bar dataKey="pnl" radius={[4, 4, 0, 0]}>
                     {chartsData.sessionData.map((entry, i) => (
-                      <Cell key={i} fill={entry.pnl >= 0 ? "hsl(142, 76%, 36%)" : "hsl(0, 84%, 60%)"} />
+                      <Cell key={i} fill={entry.pnl >= 0 ? "#00ffaa" : "#ef4444"} />
                     ))}
                   </Bar>
                 </BarChart>
@@ -741,10 +741,10 @@ export function DashboardTab({ trades, setups = [], onOpenChat }: DashboardTabPr
       </div>
 
       {/* Trades Table */}
-      <Card className="bg-card/40 border-border/20 shadow-sm">
+      <Card className="bg-card border-border">
         <CardHeader className="pb-2 pt-4 px-4">
           <CardTitle className="text-sm font-semibold flex items-center gap-2">
-            <Activity className="h-4 w-4 text-blue-500" />
+            <Activity className="h-4 w-4 text-foreground" />
             Trades ({sortedTrades.length})
           </CardTitle>
         </CardHeader>
@@ -752,7 +752,7 @@ export function DashboardTab({ trades, setups = [], onOpenChat }: DashboardTabPr
           <div className="overflow-x-auto">
             <table className="w-full text-xs">
               <thead>
-                <tr className="border-b border-border/30">
+                <tr className="border-b border-border">
                   <th className="px-3 py-2.5 text-left font-semibold text-muted-foreground w-8"></th>
                   <th className="px-3 py-2.5 text-left font-semibold text-muted-foreground">Symbol</th>
                   <th className="px-3 py-2.5 text-left font-semibold text-muted-foreground">Side</th>
@@ -775,8 +775,8 @@ export function DashboardTab({ trades, setups = [], onOpenChat }: DashboardTabPr
                     <React.Fragment key={t.id}>
                       <tr
                         className={cn(
-                          "border-b border-border/20 hover:bg-muted/30 cursor-pointer transition-colors",
-                          t.isNew && "bg-blue-500/5 border-l-2 border-l-blue-500"
+                          "border-b border-border hover:bg-muted cursor-pointer transition-colors",
+                          t.isNew && "bg-muted border-l-2 border-l-success"
                         )}
                         onClick={() => toggleRow(t.id)}
                       >
@@ -796,12 +796,12 @@ export function DashboardTab({ trades, setups = [], onOpenChat }: DashboardTabPr
                           </div>
                         </td>
                         <td className="px-3 py-2.5">
-                          <Badge variant="outline" className={cn("text-[10px]", t.side === "long" ? "text-green-500 border-green-500/30" : "text-red-500 border-red-500/30")}>
+                          <Badge variant="outline" className={cn("text-[10px]", t.side === "long" ? "text-success border-success/30" : "text-destructive border-destructive/30")}>
                             {t.side?.toUpperCase()}
                           </Badge>
                         </td>
                         <td className="px-3 py-2.5">
-                          <Badge variant="outline" className={cn("text-[10px]", t.status === "open" ? "text-blue-500 border-blue-500/30" : "text-muted-foreground")}>
+                          <Badge variant="outline" className={cn("text-[10px]", t.status === "open" ? "text-foreground border-border" : "text-muted-foreground")}>
                             {t.status}
                           </Badge>
                         </td>
@@ -816,7 +816,7 @@ export function DashboardTab({ trades, setups = [], onOpenChat }: DashboardTabPr
                                 Add
                               </Badge>
                             ) : (
-                              <Badge variant="outline" className="text-[10px] border-border/50 text-muted-foreground cursor-pointer hover:bg-muted/40 gap-1">
+                              <Badge variant="outline" className="text-[10px] border-border text-muted-foreground cursor-pointer hover:bg-muted gap-1">
                                 <Pencil className="h-3 w-3" />
                                 Edit
                               </Badge>
@@ -827,7 +827,7 @@ export function DashboardTab({ trades, setups = [], onOpenChat }: DashboardTabPr
 
                       {/* Expanded row */}
                       {expandedRows.has(t.id) && (
-                        <tr className="bg-muted/20">
+                        <tr className="bg-muted">
                           <td colSpan={8} className="px-6 py-4">
                             <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4 text-xs">
                               {/* Moved from main row */}
@@ -862,7 +862,7 @@ export function DashboardTab({ trades, setups = [], onOpenChat }: DashboardTabPr
                             </div>
 
                             {/* Second row: existing expanded data */}
-                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs mt-4 pt-4 border-t border-border/20">
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs mt-4 pt-4 border-t border-border">
                               <div>
                                 <p className="text-muted-foreground font-medium mb-1">Setups</p>
                                 <div className="flex flex-wrap gap-1">
@@ -883,9 +883,9 @@ export function DashboardTab({ trades, setups = [], onOpenChat }: DashboardTabPr
                               <div>
                                 <p className="text-muted-foreground font-medium mb-1">MAE / MFE</p>
                                 <p>
-                                  {t.mae !== null ? <span className="text-red-500">${t.mae.toFixed(2)}</span> : "-"}
+                                  {t.mae !== null ? <span className="text-destructive">${t.mae.toFixed(2)}</span> : "-"}
                                   {" / "}
-                                  {t.mfe !== null ? <span className="text-green-500">${t.mfe.toFixed(2)}</span> : "-"}
+                                  {t.mfe !== null ? <span className="text-success">${t.mfe.toFixed(2)}</span> : "-"}
                                 </p>
                               </div>
                               {t.exitReason && (
@@ -1098,8 +1098,8 @@ function TradeJournalDialog({
               className={cn(
                 "text-[10px] ml-1",
                 trade.side === "long"
-                  ? "text-green-500 border-green-500/30"
-                  : "text-red-500 border-red-500/30"
+                  ? "text-success border-success/30"
+                  : "text-destructive border-destructive/30"
               )}
             >
               {trade.side?.toUpperCase()}
@@ -1115,7 +1115,7 @@ function TradeJournalDialog({
         <div className="grid gap-6 py-2">
           {/* ── Section 1: Entry Journaling ── */}
           <div className="space-y-4">
-            <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider border-b border-border/40 pb-1.5">
+            <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider border-b border-border pb-1.5">
               Entry Journaling
             </h4>
 
@@ -1157,7 +1157,7 @@ function TradeJournalDialog({
                       {newSetupNames.map((name) => (
                         <span
                           key={`new-${name}`}
-                          className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-medium bg-blue-500/15 text-blue-500"
+                          className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-medium bg-primary/15 text-foreground"
                         >
                           {name}
                           <X
@@ -1173,7 +1173,7 @@ function TradeJournalDialog({
 
                 {/* Dropdown */}
                 {setupDropdownOpen && (
-                  <div className="absolute z-50 mt-1 w-full rounded-md border border-border bg-background shadow-md">
+                  <div className="absolute z-50 mt-1 w-full rounded-[6px] border border-border bg-background">
                     {/* Search input */}
                     <div className="p-1.5 border-b border-border">
                       <input
@@ -1186,7 +1186,7 @@ function TradeJournalDialog({
                           if (e.key === "Escape") { setSetupDropdownOpen(false); setSetupSearch(""); }
                         }}
                         placeholder="Search or type to create..."
-                        className="w-full rounded border-0 bg-muted/40 px-2.5 py-1.5 text-xs outline-none placeholder:text-muted-foreground"
+                        className="w-full rounded border-0 bg-muted px-2.5 py-1.5 text-xs outline-none placeholder:text-muted-foreground"
                       />
                     </div>
 
@@ -1198,7 +1198,7 @@ function TradeJournalDialog({
                           <div
                             key={s.id}
                             onClick={() => toggleExistingSetup(s.id)}
-                            className="flex items-center gap-2 px-2.5 py-1.5 text-xs cursor-pointer hover:bg-muted/50 transition-colors"
+                            className="flex items-center gap-2 px-2.5 py-1.5 text-xs cursor-pointer hover:bg-muted transition-colors"
                           >
                             <div className={cn(
                               "flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-[3px] border",
@@ -1220,9 +1220,9 @@ function TradeJournalDialog({
                       {newSetupNames.map((name) => (
                         <div
                           key={`new-${name}`}
-                          className="flex items-center gap-2 px-2.5 py-1.5 text-xs text-blue-500"
+                          className="flex items-center gap-2 px-2.5 py-1.5 text-xs text-foreground"
                         >
-                          <div className="flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-[3px] border border-blue-500 bg-blue-500">
+                          <div className="flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-[3px] border border-primary bg-primary">
                             <svg className="h-2.5 w-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
                               <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                             </svg>
@@ -1236,9 +1236,9 @@ function TradeJournalDialog({
                       {setupSearch.trim() && !hasExactMatch && (
                         <div
                           onClick={handleCreateNew}
-                          className="flex items-center gap-2 px-2.5 py-1.5 text-xs cursor-pointer hover:bg-muted/50 transition-colors border-t border-border text-blue-500"
+                          className="flex items-center gap-2 px-2.5 py-1.5 text-xs cursor-pointer hover:bg-muted transition-colors border-t border-border text-foreground"
                         >
-                          <div className="flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-[3px] border border-blue-500/40">
+                          <div className="flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-[3px] border border-primary/40">
                             <svg className="h-2.5 w-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                               <path strokeLinecap="round" d="M12 5v14M5 12h14" />
                             </svg>
@@ -1357,13 +1357,13 @@ function TradeJournalDialog({
 
           {/* ── Section 2: Post Trade ── */}
           <div className="space-y-4">
-            <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider border-b border-border/40 pb-1.5">
+            <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider border-b border-border pb-1.5">
               Post Trade
             </h4>
 
             {/* Holding Time (auto-computed, display only) */}
             {holdingTimeDisplay && (
-              <div className="flex items-center gap-2 text-xs bg-muted/30 rounded-md px-3 py-2">
+              <div className="flex items-center gap-2 text-xs bg-muted rounded-md px-3 py-2">
                 <Clock className="h-3.5 w-3.5 text-muted-foreground" />
                 <span className="text-muted-foreground">Holding Time:</span>
                 <span className="font-medium">{holdingTimeDisplay}</span>
