@@ -2,6 +2,7 @@ import "server-only";
 import ccxt from "ccxt";
 import type { Exchange as CCXTExchange, Trade as CCXTTrade } from "ccxt";
 import { prisma } from "@/lib/prisma";
+import { getSessionFromDate } from "@/lib/utils";
 
 const isDev = process.env.NODE_ENV === "development";
 
@@ -232,6 +233,7 @@ export async function syncUserTrades(userId: string): Promise<SyncResult> {
                 syncedAt: new Date(),
                 entryDate: actualEntryDate,
                 fees: entryFees,
+                session: getSessionFromDate(actualEntryDate),
               },
             });
 

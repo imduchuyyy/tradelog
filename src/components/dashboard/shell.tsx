@@ -13,6 +13,7 @@ import {
   Sparkles,
   Wrench,
   X,
+  Minus,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -61,6 +62,7 @@ export function DashboardShell({
 }: DashboardShellProps) {
   const [activeTab, setActiveTab] = useState<Tab>("dashboard");
   const [mobileChatOpen, setMobileChatOpen] = useState(false);
+  const [chatOpen, setChatOpen] = useState(false);
   const [chatContext, setChatContext] = useState<any>(null);
 
   // Sync trigger — TradeSync exposes a trigger function, shell calls it
@@ -69,6 +71,7 @@ export function DashboardShell({
 
   const handleOpenChatForContext = (context: any) => {
     setChatContext(context);
+    setChatOpen(true);
     setMobileChatOpen(true);
   };
 
@@ -234,23 +237,54 @@ export function DashboardShell({
               <SettingsTab user={user} exchanges={exchanges} />
             )}
           </main>
+        </div>
+      </div>
 
-          {/* AI Chat sidebar — ALWAYS VISIBLE on desktop */}
-          <aside className="hidden md:flex w-80 border-l border-border bg-card lg:w-96 shrink-0 relative flex-col">
-            <div className="flex items-center justify-between border-b border-border px-4 py-3 shrink-0 bg-background backdrop-blur-sm z-10">
-              <div className="flex items-center gap-2">
-                <Sparkles className="h-4 w-4 text-success" />
-                <h3 className="text-sm font-semibold">AI Analytics</h3>
-              </div>
+      {/* Floating AI Chat — Desktop */}
+      <div className="hidden md:block">
+        {/* Toggle button */}
+        {!chatOpen && (
+          <button
+            onClick={() => setChatOpen(true)}
+            className="fixed bottom-5 right-5 z-50 flex h-12 w-12 items-center justify-center rounded-full border border-border bg-card text-foreground hover:bg-muted transition-colors"
+          >
+            <Sparkles className="h-5 w-5" />
+          </button>
+        )}
+
+        {/* Chat box — always mounted, toggled with visibility */}
+        <div
+          className={cn(
+            "fixed bottom-5 right-5 z-50 flex w-[400px] flex-col rounded-[6px] border border-border bg-card overflow-hidden transition-all duration-200",
+            chatOpen
+              ? "opacity-100 translate-y-0 pointer-events-auto"
+              : "opacity-0 translate-y-4 pointer-events-none invisible"
+          )}
+          style={{ height: "min(600px, calc(100vh - 100px))" }}
+        >
+          {/* Header */}
+          <div className="flex items-center justify-between border-b border-border px-4 py-3 shrink-0">
+            <div className="flex items-center gap-2">
+              <Sparkles className="h-4 w-4 text-success" />
+              <h3 className="text-sm font-semibold">AI Analytics</h3>
             </div>
-            <div className="flex-1 overflow-hidden">
-              <AIChatPanel
-                chatSessions={chatSessions}
-                user={user}
-                tradeContext={chatContext}
-              />
+            <div className="flex items-center gap-1">
+              <Button variant="ghost" size="icon-xs" onClick={() => setChatOpen(false)} className="h-7 w-7">
+                <Minus className="h-3.5 w-3.5" />
+              </Button>
+              <Button variant="ghost" size="icon-xs" onClick={() => setChatOpen(false)} className="h-7 w-7">
+                <X className="h-3.5 w-3.5" />
+              </Button>
             </div>
-          </aside>
+          </div>
+          {/* Chat content */}
+          <div className="flex-1 overflow-hidden">
+            <AIChatPanel
+              chatSessions={chatSessions}
+              user={user}
+              tradeContext={chatContext}
+            />
+          </div>
         </div>
       </div>
 

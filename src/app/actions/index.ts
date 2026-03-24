@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { getSessionFromDate } from "@/lib/utils";
 
 // ─── Auth helpers ────────────────────────────────────────────────────────────
 
@@ -13,69 +14,6 @@ async function getAuthUserId() {
     redirect("/login");
   }
   return session.user.id;
-}
-
-// ─── Trade actions ───────────────────────────────────────────────────────────
-
-export async function createTrade(formData: FormData) {
-  const userId = await getAuthUserId();
-
-  // Parse setup IDs (M:N relationship)
-  const setupIdsRaw = formData.get("setupIds") as string | null;
-  const setupIds: string[] = setupIdsRaw
-    ? JSON.parse(setupIdsRaw)
-    : [];
-
-  const data: Record<string, unknown> = {
-    userId,
-    symbol: formData.get("symbol") as string,
-    side: formData.get("side") as string,
-    status: (formData.get("status") as string) || "open",
-    entryPrice: parseFloat(formData.get("entryPrice") as string),
-    exitPrice: formData.get("exitPrice")
-      ? parseFloat(formData.get("exitPrice") as string)
-      : null,
-    quantity: parseFloat(formData.get("quantity") as string),
-    pnl: formData.get("pnl")
-      ? parseFloat(formData.get("pnl") as string)
-      : null,
-    pnlPercent: formData.get("pnlPercent")
-      ? parseFloat(formData.get("pnlPercent") as string)
-      : null,
-    fees: formData.get("fees")
-      ? parseFloat(formData.get("fees") as string)
-      : 0,
-    // Entry journaling
-    marketCondition: (formData.get("marketCondition") as string) || null,
-    session: (formData.get("session") as string) || null,
-    entryTimeframe: (formData.get("entryTimeframe") as string) || null,
-    riskRewardRatio: formData.get("riskRewardRatio")
-      ? parseFloat(formData.get("riskRewardRatio") as string)
-      : null,
-    confidenceLevel: formData.get("confidenceLevel")
-      ? parseInt(formData.get("confidenceLevel") as string)
-      : null,
-    disciplineLevel: formData.get("disciplineLevel")
-      ? parseInt(formData.get("disciplineLevel") as string)
-      : null,
-    notes: (formData.get("notes") as string) || null,
-    exchangeId: (formData.get("exchangeId") as string) || null,
-    entryDate: formData.get("entryDate")
-      ? new Date(formData.get("entryDate") as string)
-      : new Date(),
-    exitDate: formData.get("exitDate")
-      ? new Date(formData.get("exitDate") as string)
-      : null,
-    // Connect setups (M:N)
-    ...(setupIds.length > 0 && {
-      setups: {
-        connect: setupIds.map((id) => ({ id })),
-      },
-    }),
-  };
-
-  await prisma.trade.create({ data: data as any }); // eslint-disable-line @typescript-eslint/no-explicit-any
-  revalidatePath("/dashboard");
 }
 
 export async function deleteTrade(tradeId: string) {
@@ -151,7 +89,7 @@ export async function journalTrade(data: {
       confidenceLevel: data.confidenceLevel,
       disciplineLevel: data.disciplineLevel,
       marketCondition: data.marketCondition,
-      session: data.session,
+      session: data.session || (trade.entryDate ? getSessionFromDate(trade.entryDate) : null),
       entryTimeframe: data.entryTimeframe,
       riskRewardRatio: data.riskRewardRatio,
       notes: data.notes,

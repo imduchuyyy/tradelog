@@ -30,7 +30,7 @@ import {
   BookOpen,
   Pencil,
 } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, getSessionFromDate } from "@/lib/utils";
 import {
   ChartContainer,
   ChartTooltip,
@@ -948,7 +948,9 @@ function TradeJournalDialog({
 
   // ── Other form state ──
   const [marketCondition, setMarketCondition] = useState(trade.marketCondition || "");
-  const [session, setSession] = useState(trade.session || "");
+  const [session, setSession] = useState(
+    trade.session || (trade.entryDate ? getSessionFromDate(new Date(trade.entryDate)) : "")
+  );
   const [entryTimeframe, setEntryTimeframe] = useState(trade.entryTimeframe || "");
   const [riskRewardRatio, setRiskRewardRatio] = useState(
     trade.riskRewardRatio != null ? String(trade.riskRewardRatio) : ""
@@ -1006,7 +1008,7 @@ function TradeJournalDialog({
         setSetupSearch("");
         setSetupDropdownOpen(false);
         setMarketCondition(trade.marketCondition || "");
-        setSession(trade.session || "");
+        setSession(trade.session || (trade.entryDate ? getSessionFromDate(new Date(trade.entryDate)) : ""));
         setEntryTimeframe(trade.entryTimeframe || "");
         setRiskRewardRatio(trade.riskRewardRatio != null ? String(trade.riskRewardRatio) : "");
         setConfidenceLevel(trade.confidenceLevel != null ? trade.confidenceLevel : 5);
