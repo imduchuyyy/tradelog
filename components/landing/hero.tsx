@@ -92,7 +92,7 @@ export async function LandingHero() {
             <div className="col-span-3 rounded-[5px] border border-border bg-background p-4">
               <div className="flex items-center justify-between mb-3">
                 <p className="text-sm font-medium">{t("previewEquityCurve")}</p>
-                <span className="text-xs text-muted-foreground font-mono">30D</span>
+                <span className="text-xs text-muted-foreground font-mono">{t("previewRange")}</span>
               </div>
               <div className="flex items-end gap-1 h-32">
                 {[40, 45, 35, 50, 48, 55, 52, 60, 58, 65, 62, 70, 68, 72, 75, 73, 78, 80, 76, 82, 85, 83, 88, 90, 87, 92, 95, 93, 97, 100].map(

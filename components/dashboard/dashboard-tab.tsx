@@ -3,6 +3,7 @@
 import { useMemo, useRef, useState } from "react";
 import { Plus, Trash2, X } from "lucide-react";
 import { format } from "date-fns";
+import { useTranslations } from "next-intl";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -33,34 +34,14 @@ import {
 import { normalizeSetupTag, parseSetupTags, serializeSetupTags } from "@/lib/trade-setup";
 import { getTradeResult, type Trade } from "@/lib/trade";
 import { cn } from "@/lib/utils";
-import { Area, AreaChart, Bar, BarChart, CartesianGrid, Line, LineChart, ReferenceLine, XAxis, YAxis } from "recharts";
+import { Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, Line, LineChart, ReferenceLine, XAxis, YAxis } from "recharts";
 
 interface DashboardTabProps {
   trades: Trade[];
 }
 
-const pnlChartConfig = {
-  cumulativePnl: {
-    label: "Cumulative PnL",
-    color: "var(--success)",
-  },
-} satisfies ChartConfig;
-
-const dailyPnlChartConfig = {
-  dailyPnl: {
-    label: "Daily PnL",
-    color: "var(--foreground)",
-  },
-} satisfies ChartConfig;
-
-const winRateChartConfig = {
-  winRate: {
-    label: "Win Rate %",
-    color: "var(--success)",
-  },
-} satisfies ChartConfig;
-
 export function DashboardTab({ trades }: DashboardTabProps) {
+  const t = useTranslations("dashboard.manualJournal");
   const defaultEndDate = useMemo(() => formatDateInput(new Date()), []);
   const defaultStartDate = useMemo(() => {
     const date = new Date();
@@ -129,6 +110,18 @@ export function DashboardTab({ trades }: DashboardTabProps) {
     return { total, wins, losses, winRate, best, worst, profitFactor };
   }, [sortedTrades]);
   const chartData = useMemo(() => buildChartData(sortedTrades), [sortedTrades]);
+  const pnlChartConfig = useMemo(
+    () => ({ cumulativePnl: { label: t("cumulativePnl"), color: "var(--success)" } }) satisfies ChartConfig,
+    [t]
+  );
+  const dailyPnlChartConfig = useMemo(
+    () => ({ dailyPnl: { label: t("dailyPnl"), color: "var(--foreground)" } }) satisfies ChartConfig,
+    [t]
+  );
+  const winRateChartConfig = useMemo(
+    () => ({ winRate: { label: t("winRatePercent"), color: "var(--success)" } }) satisfies ChartConfig,
+    [t]
+  );
 
   const formatMoney = (value: number) => `${value >= 0 ? "+" : "-"}$${Math.abs(value).toFixed(2)}`;
   const moneyColor = (value: number) => value >= 0 ? "text-success" : "text-destructive";
@@ -138,43 +131,43 @@ export function DashboardTab({ trades }: DashboardTabProps) {
     <div className="mx-auto max-w-5xl space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight">Manual Journal</h2>
-          <p className="text-sm text-muted-foreground">Add the trade result and the lesson. Nothing else is required.</p>
+          <h2 className="text-2xl font-bold tracking-tight">{t("title")}</h2>
+          <p className="text-sm text-muted-foreground">{t("subtitle")}</p>
         </div>
-        <TradeDialog title="Add Journal Entry" symbolOptions={symbolOptions} setupOptions={setupOptions}>
+        <TradeDialog title={t("addJournalEntry")} symbolOptions={symbolOptions} setupOptions={setupOptions}>
           <Button className="gap-2">
             <Plus className="h-4 w-4" />
-            Add Entry
+            {t("addEntry")}
           </Button>
         </TradeDialog>
       </div>
 
       <Card className="border-border bg-card">
         <CardHeader>
-          <CardTitle className="text-base">Filters</CardTitle>
+          <CardTitle className="text-base">{t("filters")}</CardTitle>
         </CardHeader>
         <CardContent className="grid gap-3 md:grid-cols-2 lg:grid-cols-5">
-          <FilterMenu label="Symbols" options={symbolOptions} selected={selectedSymbols} onChange={setSelectedSymbols} formatOption={(option) => `#${option}`} />
-          <FilterMenu label="Sessions" options={sessionOptions} selected={selectedSessions} onChange={setSelectedSessions} formatOption={formatSession} />
-          <FilterMenu label="Setups" options={setupOptions} selected={selectedSetups} onChange={setSelectedSetups} />
+          <FilterMenu label={t("symbols")} options={symbolOptions} selected={selectedSymbols} onChange={setSelectedSymbols} formatOption={(option) => `#${option}`} />
+          <FilterMenu label={t("sessions")} options={sessionOptions} selected={selectedSessions} onChange={setSelectedSessions} formatOption={formatSession} />
+          <FilterMenu label={t("setups")} options={setupOptions} selected={selectedSetups} onChange={setSelectedSetups} />
           <div className="space-y-2">
-            <Label>From</Label>
+            <Label>{t("from")}</Label>
             <FilterDatePicker value={startDate} onChange={setStartDate} />
           </div>
           <div className="space-y-2">
-            <Label>To</Label>
+            <Label>{t("to")}</Label>
             <FilterDatePicker value={endDate} onChange={setEndDate} />
           </div>
         </CardContent>
       </Card>
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-        <StatCard label="Total PnL" value={formatMoney(stats.total)} className={moneyColor(stats.total)} tone={stats.total >= 0 ? "success" : "danger"} />
-        <StatCard label="Entries" value={String(sortedTrades.length)} tone="neutral" />
-        <StatCard label="Win Rate" value={`${stats.winRate.toFixed(1)}%`} helper={`${stats.wins} wins / ${stats.losses} losses`} tone={stats.winRate >= 50 ? "success" : "danger"} />
-        <StatCard label="Profit Factor" value={formatProfitFactor(stats.profitFactor)} helper="Gross profit / gross loss" tone={stats.profitFactor >= 1 ? "success" : "danger"} />
+        <StatCard label={t("totalPnl")} value={formatMoney(stats.total)} className={moneyColor(stats.total)} tone={stats.total >= 0 ? "success" : "danger"} />
+        <StatCard label={t("entries")} value={String(sortedTrades.length)} tone="neutral" />
+        <StatCard label={t("winRate")} value={`${stats.winRate.toFixed(1)}%`} helper={t("winsLosses", { wins: stats.wins, losses: stats.losses })} tone={stats.winRate >= 50 ? "success" : "danger"} />
+        <StatCard label={t("profitFactor")} value={formatProfitFactor(stats.profitFactor)} helper={t("profitFactorHelper")} tone={stats.profitFactor >= 1 ? "success" : "danger"} />
         <StatCard
-          label="Best / Worst"
+          label={t("bestWorst")}
           value={
             <span className="inline-flex flex-wrap gap-1.5">
               <span className="text-success">{formatMoney(stats.best)}</span>
@@ -189,7 +182,7 @@ export function DashboardTab({ trades }: DashboardTabProps) {
       <div className="grid gap-3 lg:grid-cols-2">
         <Card className="border-border bg-card">
           <CardHeader>
-            <CardTitle className="text-base">PnL Curve</CardTitle>
+            <CardTitle className="text-base">{t("pnlCurve")}</CardTitle>
           </CardHeader>
           <CardContent>
             <ChartContainer config={pnlChartConfig} className="h-72 w-full aspect-auto">
@@ -207,7 +200,7 @@ export function DashboardTab({ trades }: DashboardTabProps) {
 
         <Card className="border-border bg-card">
           <CardHeader>
-            <CardTitle className="text-base">Daily PnL</CardTitle>
+            <CardTitle className="text-base">{t("dailyPnl")}</CardTitle>
           </CardHeader>
           <CardContent>
             <ChartContainer config={dailyPnlChartConfig} className="h-72 w-full aspect-auto">
@@ -217,7 +210,11 @@ export function DashboardTab({ trades }: DashboardTabProps) {
                 <YAxis tickLine={false} axisLine={false} tickMargin={8} width={48} />
                 <ReferenceLine y={0} stroke="var(--border)" />
                 <ChartTooltip content={<ChartTooltipContent />} />
-                <Bar dataKey="dailyPnl" fill="var(--color-dailyPnl)" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="dailyPnl" radius={[4, 4, 0, 0]}>
+                  {chartData.map((item) => (
+                    <Cell key={item.date} fill={item.dailyPnl >= 0 ? "var(--success)" : "var(--destructive)"} />
+                  ))}
+                </Bar>
               </BarChart>
             </ChartContainer>
           </CardContent>
@@ -225,7 +222,7 @@ export function DashboardTab({ trades }: DashboardTabProps) {
 
         <Card className="border-border bg-card lg:col-span-2">
           <CardHeader>
-            <CardTitle className="text-base">Win Rate Trend</CardTitle>
+            <CardTitle className="text-base">{t("winRateTrend")}</CardTitle>
           </CardHeader>
           <CardContent>
             <ChartContainer config={winRateChartConfig} className="h-72 w-full aspect-auto">
@@ -243,33 +240,23 @@ export function DashboardTab({ trades }: DashboardTabProps) {
 
       <Card className="border-border bg-card">
         <CardHeader>
-          <CardTitle className="text-base">Journal Entries</CardTitle>
+          <CardTitle className="text-base">{t("journalEntries")}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
           {sortedTrades.length === 0 ? (
             <div className="rounded-md border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
-              No entries yet. Add your first manual journal entry.
+              {t("noEntries")}
             </div>
           ) : (
             sortedTrades.map((trade) => {
               const result = Number(trade.result);
               return (
-                <TradeDialog key={trade.id} title="Edit Journal Entry" trade={trade} symbolOptions={symbolOptions} setupOptions={setupOptions} triggerClassName="block">
+                <TradeDialog key={trade.id} title={t("editJournalEntry")} trade={trade} symbolOptions={symbolOptions} setupOptions={setupOptions} triggerClassName="block">
                   <div className="rounded-md border border-border bg-background p-4 transition-colors hover:border-ring/60 hover:bg-muted/20">
                     <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                       <div className="space-y-2">
                         <div className="flex flex-wrap items-center gap-2">
                           <Badge variant="outline">#{trade.symbol}</Badge>
-                          <Badge
-                            variant="outline"
-                            className={cn(
-                              trade.direction === "long"
-                                ? "border-success/30 text-success"
-                                : "border-destructive/30 text-destructive"
-                            )}
-                          >
-                            {trade.direction.toUpperCase()}
-                          </Badge>
                           <span className="text-xs text-muted-foreground">
                             {new Date(trade.tradeDate).toLocaleString()}
                           </span>
@@ -388,6 +375,7 @@ function FilterMenu({
   onChange: (selected: string[]) => void;
   formatOption?: (option: string) => string;
 }) {
+  const t = useTranslations("dashboard.manualJournal");
   function toggleOption(option: string) {
     onChange(selected.includes(option) ? selected.filter((item) => item !== option) : [...selected, option]);
   }
@@ -398,17 +386,17 @@ function FilterMenu({
       <DropdownMenu>
         <DropdownMenuTrigger render={<Button type="button" variant="outline" className="w-full justify-between font-normal" />}>
           <span className="truncate">
-            {selected.length > 0 ? `${selected.length} selected` : `All ${label.toLowerCase()}`}
+            {selected.length > 0 ? t("selectedCount", { count: selected.length }) : t("allLabel", { label: label.toLowerCase() })}
           </span>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start" className="max-h-64">
           {selected.length > 0 && (
             <DropdownMenuItem onClick={() => onChange([])}>
-              Clear {label.toLowerCase()}
+              {t("clearLabel", { label: label.toLowerCase() })}
             </DropdownMenuItem>
           )}
           {options.length === 0 ? (
-            <DropdownMenuItem disabled>No options</DropdownMenuItem>
+            <DropdownMenuItem disabled>{t("noOptions")}</DropdownMenuItem>
           ) : (
             options.map((option) => (
               <DropdownMenuItem key={option} onClick={() => toggleOption(option)}>
@@ -445,6 +433,7 @@ function TradeDialog({
   triggerClassName?: string;
   children: React.ReactNode;
 }) {
+  const t = useTranslations("dashboard.manualJournal");
   const [open, setOpen] = useState(false);
   const initialNoteDocument = useMemo(() => parseBlockNoteDocument(trade?.note), [trade?.note]);
   const [noteValue, setNoteValue] = useState<BlockNoteDocument>(initialNoteDocument);
@@ -482,7 +471,7 @@ function TradeDialog({
 
     if (!response.ok) {
       const data = (await response.json().catch(() => null)) as { error?: string } | null;
-      throw new Error(data?.error || "Could not upload image");
+      throw new Error(data?.error || t("uploadImageError"));
     }
 
     return (await response.json()) as { url: string };
@@ -505,7 +494,7 @@ function TradeDialog({
       keepNoteOnCloseRef.current = true;
       handleOpenChange(false);
     } catch (err) {
-      setSubmitError(err instanceof Error ? err.message : "Could not save entry");
+      setSubmitError(err instanceof Error ? err.message : t("saveEntryError"));
     } finally {
       setSubmitting(false);
     }
@@ -519,44 +508,32 @@ function TradeDialog({
       <DrawerContent>
         <DrawerHeader>
           <DrawerTitle>{title}</DrawerTitle>
-          <DrawerDescription>Capture the result, setup context, and screenshots in one structured journal entry.</DrawerDescription>
+          <DrawerDescription>{t("dialogDescription")}</DrawerDescription>
         </DrawerHeader>
         <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col">
           <div className="flex-1 space-y-6 overflow-y-auto px-6 py-5">
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor={symbolInputId}>Symbol</Label>
+                <Label htmlFor={symbolInputId}>{t("symbol")} <span className="text-destructive">*</span></Label>
                 <SymbolCombobox id={symbolInputId} defaultValue={trade?.symbol || ""} options={symbolOptions} />
               </div>
               <div className="space-y-2">
-                <Label htmlFor={`result-${trade?.id || "new"}`}>Result</Label>
-                <Input id={`result-${trade?.id || "new"}`} name="result" type="number" step="0.01" defaultValue={trade?.result ?? ""} placeholder="+100 or -50" required />
+                <Label htmlFor={`result-${trade?.id || "new"}`}>{t("result")} <span className="text-destructive">*</span></Label>
+                <Input id={`result-${trade?.id || "new"}`} name="result" type="number" step="0.01" defaultValue={trade?.result ?? ""} placeholder={t("resultPlaceholder")} required />
               </div>
               <div className="space-y-2 sm:col-span-2">
-                <Label>Timestamp</Label>
+                <Label>{t("timestamp")}</Label>
                 <TimestampPicker defaultValue={trade?.tradeDate} />
-                <p className="text-xs text-muted-foreground">Trading session is detected automatically from this timestamp.</p>
+                <p className="text-xs text-muted-foreground">{t("timestampHelper")}</p>
               </div>
               <div className="space-y-2 sm:col-span-2">
-                <Label>Setup</Label>
+                <Label>{t("setup")}</Label>
                 <SetupCombobox defaultValue={parseSetupTags(trade?.setup)} options={setupOptions} />
               </div>
             </div>
 
             <div className="space-y-2">
-              <Label>Direction</Label>
-              <div className="grid grid-cols-2 gap-2">
-                {(["long", "short"] as const).map((direction) => (
-                  <label key={direction} className="flex cursor-pointer items-center gap-2 rounded-md border border-border px-3 py-2 text-sm">
-                    <input type="radio" name="direction" value={direction} defaultChecked={(trade?.direction || "long") === direction} />
-                    {direction.toUpperCase()}
-                  </label>
-                ))}
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor={`note-${trade?.id || "new"}`}>Note</Label>
+              <Label htmlFor={`note-${trade?.id || "new"}`}>{t("note")}</Label>
               <input type="hidden" name="note" value={isEmptyBlockNoteDocument(noteValue) ? "" : JSON.stringify(noteValue)} />
               <DynamicBlockNoteNoteEditor
                 key={`${trade?.id || "new"}-${open ? "open" : "closed"}`}
@@ -571,7 +548,7 @@ function TradeDialog({
           </div>
           <DrawerFooter>
             <Button type="submit" className="w-full sm:w-auto" disabled={submitting}>
-              {submitting ? "Saving..." : "Save Entry"}
+              {submitting ? t("saving") : t("saveEntry")}
             </Button>
           </DrawerFooter>
         </form>
@@ -594,6 +571,7 @@ function formatDateInput(value: Date) {
 }
 
 function TimestampPicker({ defaultValue }: { defaultValue?: Date | string }) {
+  const t = useTranslations("dashboard.manualJournal");
   const [date, setDate] = useState(() => (defaultValue ? new Date(defaultValue) : new Date()));
 
   function selectDate(nextDate?: Date) {
@@ -622,7 +600,7 @@ function TimestampPicker({ defaultValue }: { defaultValue?: Date | string }) {
         type="time"
         value={format(date, "HH:mm")}
         onChange={(event) => selectTime(event.target.value)}
-        aria-label="Trade time"
+        aria-label={t("tradeTime")}
         required
       />
     </div>
@@ -651,6 +629,7 @@ function formatSession(session: string) {
 }
 
 function SetupCombobox({ defaultValue, options }: { defaultValue: string[]; options: string[] }) {
+  const t = useTranslations("dashboard.manualJournal");
   const [selectedSetups, setSelectedSetups] = useState(defaultValue);
   const [value, setValue] = useState("");
   const [open, setOpen] = useState(false);
@@ -685,7 +664,7 @@ function SetupCombobox({ defaultValue, options }: { defaultValue: string[]; opti
               type="button"
               onClick={() => removeSetup(setup)}
               className="rounded-sm text-muted-foreground hover:text-foreground"
-              aria-label={`Remove ${setup}`}
+              aria-label={t("removeSetup", { setup })}
             >
               <X className="h-3 w-3" />
             </button>
@@ -705,14 +684,14 @@ function SetupCombobox({ defaultValue, options }: { defaultValue: string[]; opti
               addSetup(value);
             }
           }}
-          placeholder={selectedSetups.length ? "Add setup..." : "Breakout, Reversal..."}
+          placeholder={selectedSetups.length ? t("addSetupPlaceholder") : t("setupPlaceholder")}
           className="h-6 min-w-32 flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground/60"
         />
         {open && (
           <div className="absolute top-full left-0 z-50 mt-1 max-h-56 w-full overflow-y-auto rounded-[6px] border border-border bg-popover p-1 text-popover-foreground shadow-md">
             {canCreate && (
               <button type="button" className="flex w-full items-center rounded-md px-1.5 py-1 text-left text-sm hover:bg-accent hover:text-accent-foreground" onMouseDown={(event) => event.preventDefault()} onClick={() => addSetup(normalizedValue)}>
-                Create {normalizedValue}
+                {t("createValue", { value: normalizedValue })}
               </button>
             )}
             {filteredOptions.map((setup) => (
@@ -721,17 +700,18 @@ function SetupCombobox({ defaultValue, options }: { defaultValue: string[]; opti
               </button>
             ))}
             {filteredOptions.length === 0 && !canCreate && (
-              <div className="px-1.5 py-1 text-sm text-muted-foreground">{value ? "No matching setup" : "No setup history"}</div>
+              <div className="px-1.5 py-1 text-sm text-muted-foreground">{value ? t("noMatchingSetup") : t("noSetupHistory")}</div>
             )}
           </div>
         )}
       </div>
-      <p className="text-xs text-muted-foreground">Select existing setup tags or create new ones.</p>
+      <p className="text-xs text-muted-foreground">{t("setupHelper")}</p>
     </div>
   );
 }
 
 function SymbolCombobox({ id, defaultValue, options }: { id: string; defaultValue: string; options: string[] }) {
+  const t = useTranslations("dashboard.manualJournal");
   const [value, setValue] = useState(defaultValue);
   const [open, setOpen] = useState(false);
   const normalizedValue = value.trim().toUpperCase();
@@ -755,7 +735,7 @@ function SymbolCombobox({ id, defaultValue, options }: { id: string; defaultValu
             setOpen(true);
           }}
           onFocus={() => setOpen(true)}
-          placeholder="BTCUSDT"
+          placeholder={t("symbolPlaceholder")}
           autoComplete="off"
           required
         />
@@ -763,7 +743,7 @@ function SymbolCombobox({ id, defaultValue, options }: { id: string; defaultValu
       <DropdownMenuContent align="start" className="max-h-56">
         {normalizedValue && !exactMatch && (
           <DropdownMenuItem onClick={() => selectSymbol(normalizedValue)}>
-            Create #{normalizedValue}
+            {t("createSymbol", { symbol: normalizedValue })}
           </DropdownMenuItem>
         )}
         {filteredOptions.map((symbol) => (
@@ -772,7 +752,7 @@ function SymbolCombobox({ id, defaultValue, options }: { id: string; defaultValu
           </DropdownMenuItem>
         ))}
         {filteredOptions.length === 0 && !normalizedValue && (
-          <DropdownMenuItem disabled>No symbol history</DropdownMenuItem>
+          <DropdownMenuItem disabled>{t("noSymbolHistory")}</DropdownMenuItem>
         )}
       </DropdownMenuContent>
     </DropdownMenu>

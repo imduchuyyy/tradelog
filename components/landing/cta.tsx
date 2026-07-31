@@ -4,7 +4,7 @@ import { ArrowRight } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 
 const featureKeys = [
-  "unlimitedTradeLogging",
+  "unlimitedJournalEntries",
   "aiPoweredAnalytics",
   "pnlCalendarView",
   "customTradeSetups",

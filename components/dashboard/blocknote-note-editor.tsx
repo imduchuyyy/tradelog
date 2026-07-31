@@ -5,6 +5,7 @@ import "@blocknote/mantine/style.css";
 import { BlockNoteView } from "@blocknote/mantine";
 import { useCreateBlockNote } from "@blocknote/react";
 import { useTheme } from "next-themes";
+import { useTranslations } from "next-intl";
 import type { BlockNoteDocument, PastedBlockNoteImage } from "@/lib/blocknote-note";
 import { cn } from "@/lib/utils";
 
@@ -24,6 +25,7 @@ export default function BlockNoteNoteEditor({
   onPasteImage,
 }: BlockNoteNoteEditorProps) {
   const { resolvedTheme } = useTheme();
+  const t = useTranslations("dashboard.manualJournal");
   const editor = useCreateBlockNote(
     {
       initialContent,
@@ -49,7 +51,7 @@ export default function BlockNoteNoteEditor({
             type: "image",
             props: {
               url: image.previewUrl,
-              name: image.file.name || "pasted image",
+              name: image.file.name || t("pastedImage"),
               caption: "",
             },
           })),

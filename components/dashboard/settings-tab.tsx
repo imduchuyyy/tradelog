@@ -2,6 +2,7 @@
 
 import { useTheme } from "next-themes";
 import { Globe, Monitor, Moon, Sun } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
@@ -35,6 +36,8 @@ const themes = [
 ];
 
 export function SettingsTab({ user }: SettingsTabProps) {
+  const t = useTranslations("dashboard.settingsTab");
+  const commonT = useTranslations("common");
   const { setTheme, theme: currentTheme } = useTheme();
   const router = useRouter();
   const pathname = usePathname();
@@ -45,7 +48,7 @@ export function SettingsTab({ user }: SettingsTabProps) {
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-base">
             <Globe className="h-4 w-4 text-muted-foreground" />
-            Language
+            {t("language")}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -79,7 +82,7 @@ export function SettingsTab({ user }: SettingsTabProps) {
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-base">
             <Moon className="h-4 w-4 text-muted-foreground" />
-            Theme
+            {t("theme")}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -99,7 +102,7 @@ export function SettingsTab({ user }: SettingsTabProps) {
                   )}
                 >
                   <Icon className="h-3.5 w-3.5" />
-                  {theme.label}
+                  {commonT(theme.code)}
                 </button>
               );
             })}
@@ -109,16 +112,16 @@ export function SettingsTab({ user }: SettingsTabProps) {
 
       <Card className="border-border bg-card">
         <CardHeader className="pb-3">
-          <CardTitle className="text-base">Account</CardTitle>
+          <CardTitle className="text-base">{t("account")}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
           <div className="flex items-center justify-between">
-            <span className="text-sm text-muted-foreground">Email</span>
+            <span className="text-sm text-muted-foreground">{t("email")}</span>
             <span className="text-sm">{user.email}</span>
           </div>
           <Separator className="bg-border" />
           <div className="flex items-center justify-between">
-            <span className="text-sm text-muted-foreground">Plan</span>
+            <span className="text-sm text-muted-foreground">{t("plan")}</span>
             <Badge variant="outline" className="text-xs capitalize">{user.plan}</Badge>
           </div>
         </CardContent>

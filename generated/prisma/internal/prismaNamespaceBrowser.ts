@@ -136,7 +136,6 @@ export const TradeScalarFieldEnum = {
   id: 'id',
   userId: 'userId',
   symbol: 'symbol',
-  direction: 'direction',
   result: 'result',
   note: 'note',
   setup: 'setup',

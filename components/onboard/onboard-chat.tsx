@@ -1,6 +1,7 @@
 "use client";
 
 import { useTransition } from "react";
+import { useTranslations } from "next-intl";
 import { useRouter } from "@/i18n/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -16,6 +17,7 @@ interface OnboardConnectProps {
 }
 
 export function OnboardConnect({ user, locale }: OnboardConnectProps) {
+  const t = useTranslations("onboard");
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
 
@@ -27,9 +29,9 @@ export function OnboardConnect({ user, locale }: OnboardConnectProps) {
             {(user.name || "T").charAt(0).toUpperCase()}
           </div>
           <div className="space-y-2">
-            <h1 className="text-2xl font-bold">Start with a simple journal</h1>
+            <h1 className="text-2xl font-bold">{t("simpleJournalTitle")}</h1>
             <p className="text-sm text-muted-foreground">
-              No exchange connection is needed. Add entries manually with symbol, direction, result, and a note.
+              {t("simpleJournalDescription")}
             </p>
           </div>
           <Button
@@ -42,7 +44,7 @@ export function OnboardConnect({ user, locale }: OnboardConnectProps) {
               });
             }}
           >
-            {isPending ? "Preparing..." : "Go to Journal"}
+            {isPending ? t("preparing") : t("goToJournal")}
           </Button>
         </CardContent>
       </Card>

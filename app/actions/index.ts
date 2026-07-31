@@ -18,23 +18,20 @@ async function getAuthUserId() {
 
 function readTradeForm(formData: FormData) {
   const symbol = String(formData.get("symbol") || "").trim().toUpperCase();
-  const direction = String(formData.get("direction") || "").trim();
-  const result = Number(String(formData.get("result") || "").replace(/,/g, ""));
+  const resultValue = String(formData.get("result") || "").trim();
+  const result = Number(resultValue.replace(/,/g, ""));
   const noteValue = String(formData.get("note") || "").trim();
   const note = noteValue ? parseBlockNoteDocument(noteValue) : null;
   const setup = parseSetupTags(formData.get("setup"));
   const tradeDate = new Date(String(formData.get("tradeDate") || ""));
 
   if (!symbol) throw new Error("Symbol is required");
-  if (direction !== "long" && direction !== "short") {
-    throw new Error("Direction must be long or short");
-  }
+  if (!resultValue) throw new Error("Result is required");
   if (!Number.isFinite(result)) throw new Error("Result must be a number");
   if (Number.isNaN(tradeDate.getTime())) throw new Error("Timestamp is required");
 
   return {
     symbol,
-    direction,
     result,
     note: note && !isEmptyBlockNoteDocument(note) ? JSON.stringify(note) : null,
     setup: serializeSetupTags(setup),

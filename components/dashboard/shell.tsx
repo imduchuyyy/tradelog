@@ -3,12 +3,12 @@
 import { useState } from "react";
 import { signOut } from "next-auth/react";
 import { BarChart3, Calendar, LayoutDashboard, LogOut, Settings, Sparkles, X, Minus } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { DashboardTab } from "@/components/dashboard/dashboard-tab";
 import { CalendarTab } from "@/components/dashboard/calendar-tab";
 import { SettingsTab } from "@/components/dashboard/settings-tab";
-import { AIChatPanel } from "@/components/dashboard/ai-chat-panel";
 import { cn } from "@/lib/utils";
 import type { Trade } from "@/lib/trade";
 
@@ -29,14 +29,16 @@ interface DashboardShellProps {
   chatSessions: Array<Record<string, unknown>>;
 }
 
-export function DashboardShell({ user, trades, chatSessions }: DashboardShellProps) {
+export function DashboardShell({ user, trades }: DashboardShellProps) {
+  const t = useTranslations("dashboard");
+  const commonT = useTranslations("common");
   const [activeTab, setActiveTab] = useState<Tab>("dashboard");
   const [chatOpen, setChatOpen] = useState(false);
 
   const tabs: { id: Tab; label: string; icon: React.ElementType }[] = [
-    { id: "dashboard", label: "Journal", icon: LayoutDashboard },
-    { id: "calendar", label: "Calendar", icon: Calendar },
-    { id: "settings", label: "Settings", icon: Settings },
+    { id: "dashboard", label: t("tabs.journal"), icon: LayoutDashboard },
+    { id: "calendar", label: t("tabs.calendar"), icon: Calendar },
+    { id: "settings", label: t("tabs.settings"), icon: Settings },
   ];
 
   return (
@@ -46,7 +48,7 @@ export function DashboardShell({ user, trades, chatSessions }: DashboardShellPro
           <div className="flex h-8 w-8 items-center justify-center rounded-md border border-border bg-card">
             <BarChart3 className="h-4 w-4" />
           </div>
-          <span className="text-lg font-bold tracking-tight">Zennote</span>
+          <span className="text-lg font-bold tracking-tight">{commonT("appName")}</span>
         </div>
 
         <nav className="flex-1 space-y-1 p-3">
@@ -76,7 +78,7 @@ export function DashboardShell({ user, trades, chatSessions }: DashboardShellPro
               </AvatarFallback>
             </Avatar>
             <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-medium">{user.name || "Trader"}</p>
+              <p className="truncate text-sm font-medium">{user.name || t("trader")}</p>
               <p className="truncate text-xs text-muted-foreground">{user.email}</p>
             </div>
             <Button variant="ghost" size="icon-xs" onClick={() => signOut({ callbackUrl: "/" })}>
@@ -126,7 +128,7 @@ export function DashboardShell({ user, trades, chatSessions }: DashboardShellPro
         <div className="flex items-center justify-between border-b border-border px-4 py-3">
           <div className="flex items-center gap-2">
             <Sparkles className="h-4 w-4 text-success" />
-            <h3 className="text-sm font-semibold">AI Analytics</h3>
+            <h3 className="text-sm font-semibold">{t("aiAnalytics")}</h3>
           </div>
           <div className="flex items-center gap-1">
             <Button variant="ghost" size="icon-xs" onClick={() => setChatOpen(false)}>
@@ -137,8 +139,14 @@ export function DashboardShell({ user, trades, chatSessions }: DashboardShellPro
             </Button>
           </div>
         </div>
-        <div className="flex-1 overflow-hidden">
-          <AIChatPanel chatSessions={chatSessions} user={user} tradeContext={null} />
+        <div className="flex flex-1 flex-col items-center justify-center gap-3 p-6 text-center">
+          <div className="flex h-12 w-12 items-center justify-center rounded-md border border-border bg-muted">
+            <Sparkles className="h-5 w-5 text-success" />
+          </div>
+          <div className="space-y-1">
+            <p className="text-sm font-semibold">{t("comingSoon")}</p>
+            <p className="text-xs text-muted-foreground">{t("aiComingSoon")}</p>
+          </div>
         </div>
       </div>
     </div>

@@ -11,17 +11,17 @@ export async function LandingStats() {
     },
     {
       label: t("tradeMetrics"),
-      value: "4",
+      value: t("journalFieldsValue"),
       detail: t("fieldsPerTrade"),
     },
     {
       label: t("aiInsights"),
-      value: "24/7",
+      value: t("aiAvailabilityValue"),
       detail: t("alwaysAvailable"),
     },
     {
       label: t("exchanges"),
-      value: "0",
+      value: t("exchangeConnectionsValue"),
       detail: t("supportedPlatforms"),
     },
   ];
@@ -70,7 +70,7 @@ export async function LandingStats() {
             </div>
             <div className="space-y-3 font-mono text-xs">
               <div className="rounded-[4px] bg-background border border-border p-3">
-                <span className="text-muted-foreground">&gt; </span>
+                <span className="text-muted-foreground">{t("promptPrefix")}</span>
                 <span>{t("aiPrompt")}</span>
               </div>
               <div className="rounded-[4px] bg-success/5 border border-success/10 p-3 text-muted-foreground leading-relaxed">

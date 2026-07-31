@@ -19,6 +19,7 @@ export default async function LoginPage({
   }
 
   const t = await getTranslations("login");
+  const commonT = await getTranslations("common");
 
   return (
     <div className="relative flex min-h-screen">
@@ -29,7 +30,7 @@ export default async function LoginPage({
             <div className="flex h-9 w-9 items-center justify-center rounded-[5px] border border-border bg-background">
               <BarChart3 className="h-5 w-5 text-foreground" />
             </div>
-            <span className="text-xl font-bold">TradeLog</span>
+            <span className="text-xl font-bold">{commonT("appName")}</span>
           </Link>
         </div>
 
@@ -44,22 +45,22 @@ export default async function LoginPage({
           {/* Stats */}
           <div className="flex gap-8 pt-4">
             <div>
-              <p className="text-3xl font-bold font-mono">20+</p>
+              <p className="text-3xl font-bold font-mono">{t("metricsCount")}</p>
               <p className="text-sm text-muted-foreground">{t("tradeMetrics")}</p>
             </div>
             <div>
-              <p className="text-3xl font-bold font-mono">AI</p>
+              <p className="text-3xl font-bold font-mono">{t("aiMetricValue")}</p>
               <p className="text-sm text-muted-foreground">{t("poweredInsights")}</p>
             </div>
             <div>
-              <p className="text-3xl font-bold font-mono">10+</p>
+              <p className="text-3xl font-bold font-mono">{t("manualMetricValue")}</p>
               <p className="text-sm text-muted-foreground">{t("exchangesSupported")}</p>
             </div>
           </div>
         </div>
 
         <p className="text-xs text-muted-foreground">
-          &copy; {new Date().getFullYear()} TradeLog. {t("rights")}
+          &copy; {new Date().getFullYear()} {commonT("appName")}. {t("rights")}
         </p>
       </div>
 
@@ -72,7 +73,7 @@ export default async function LoginPage({
               <div className="flex h-9 w-9 items-center justify-center rounded-[5px] border border-border bg-card">
                 <BarChart3 className="h-5 w-5 text-foreground" />
               </div>
-              <span className="text-xl font-bold">TradeLog</span>
+              <span className="text-xl font-bold">{commonT("appName")}</span>
             </Link>
           </div>
 

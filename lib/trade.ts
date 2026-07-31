@@ -1,7 +1,6 @@
 export interface Trade {
   id: string;
   symbol: string;
-  direction: string;
   result: number;
   note: unknown;
   setup: string | null;

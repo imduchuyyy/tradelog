@@ -91,7 +91,7 @@ export function AIChatPanel({
     if (tradeContext && tradeContext.id !== initializedTradeContext.current) {
       initializedTradeContext.current = tradeContext.id;
       sendMessage({
-        text: `Analyze this journal entry: ${tradeContext.symbol} (${tradeContext.direction?.toUpperCase()}), result: $${tradeContext.result}. What insights can you give me?`,
+        text: `Analyze this journal entry: ${tradeContext.symbol}, result: $${tradeContext.result}. What insights can you give me?`,
       });
     }
   }, [tradeContext, sendMessage]);

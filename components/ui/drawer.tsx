@@ -3,6 +3,7 @@
 import * as React from "react"
 import { Drawer as DrawerPrimitive } from "@base-ui/react/drawer"
 import { XIcon } from "lucide-react"
+import { useTranslations } from "next-intl"
 
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
@@ -44,6 +45,8 @@ function DrawerContent({
 }: DrawerPrimitive.Popup.Props & {
   showCloseButton?: boolean
 }) {
+  const t = useTranslations("common")
+
   return (
     <DrawerPortal>
       <DrawerOverlay />
@@ -65,7 +68,7 @@ function DrawerContent({
               render={<Button variant="ghost" className="absolute top-4 right-4" size="icon-sm" />}
             >
               <XIcon />
-              <span className="sr-only">Close</span>
+              <span className="sr-only">{t("close")}</span>
             </DrawerPrimitive.Close>
           )}
         </DrawerPrimitive.Popup>

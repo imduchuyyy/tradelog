@@ -74,7 +74,6 @@ model Trade {
   id        String   @id @default(cuid())
   userId    String
   symbol    String
-  direction String
   result    Float
   note      String?
   setup     String?

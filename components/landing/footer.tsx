@@ -3,6 +3,7 @@ import { getTranslations } from "next-intl/server";
 
 export async function LandingFooter() {
   const t = await getTranslations("landing.footer");
+  const commonT = await getTranslations("common");
 
   return (
     <footer className="border-t border-border px-4 py-12 sm:px-6 lg:px-8">
@@ -12,7 +13,7 @@ export async function LandingFooter() {
             <div className="flex h-7 w-7 items-center justify-center rounded-[5px] border border-border bg-card">
               <BarChart3 className="h-3.5 w-3.5 text-foreground" />
             </div>
-            <span className="text-sm font-semibold">TradeLog</span>
+            <span className="text-sm font-semibold">{commonT("appName")}</span>
           </div>
 
           <div className="flex items-center gap-6 text-xs text-muted-foreground">
@@ -28,7 +29,7 @@ export async function LandingFooter() {
           </div>
 
           <p className="text-xs text-muted-foreground">
-            &copy; {new Date().getFullYear()} TradeLog. {t("rights")}
+            &copy; {new Date().getFullYear()} {commonT("appName")}. {t("rights")}
           </p>
         </div>
       </div>

@@ -15,6 +15,7 @@ import { useTranslations } from "next-intl";
 export function LandingNav() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const t = useTranslations("landing.nav");
+  const commonT = useTranslations("common");
 
   return (
     <nav className="sticky top-0 z-50 border-b border-border bg-background/90 backdrop-blur-xl">
@@ -26,7 +27,7 @@ export function LandingNav() {
               <BarChart3 className="h-4 w-4 text-foreground" />
             </div>
             <span className="text-lg font-bold tracking-tight">
-              TradeLog
+              {commonT("appName")}
             </span>
           </Link>
 

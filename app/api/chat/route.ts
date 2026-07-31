@@ -44,7 +44,7 @@ CONTEXT: The user has a SQLite database with their trading data. You have two po
 2. **compute** — Run JavaScript computations on data you've fetched
 
 DATABASE SCHEMA (SQLite):
-- **Trade** table: id, userId, symbol (TEXT tag, e.g. "BTCUSDT"), direction (TEXT: "long"|"short"), result (REAL money result, positive or negative), note (TEXT BlockNote JSON), setup (TEXT JSON array of setup tags), session (TEXT: "sydney"|"tokyo"|"london"|"new_york"), tradeDate (DATETIME), createdAt (DATETIME), updatedAt (DATETIME)
+- **Trade** table: id, userId, symbol (TEXT tag, e.g. "BTCUSDT"), result (REAL money result, positive or negative), note (TEXT BlockNote JSON), setup (TEXT JSON array of setup tags), session (TEXT: "sydney"|"tokyo"|"london"|"new_york"), tradeDate (DATETIME), createdAt (DATETIME), updatedAt (DATETIME)
 
 IMPORTANT RULES:
 - ALWAYS filter by userId = '${userId}' in your queries to ensure data isolation
@@ -64,7 +64,6 @@ COMMON QUERIES YOU SHOULD KNOW:
 - Symbol performance: GROUP BY symbol
 - Setup performance: parse setup JSON tags and group by setup tag
 - Session performance: GROUP BY session
-- Direction performance: GROUP BY direction
 - Streak analysis: order by tradeDate, count consecutive wins/losses`;
 
   // Convert UIMessage[] from useChat client to ModelMessage[] for streamText
