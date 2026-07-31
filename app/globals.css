@@ -184,6 +184,22 @@
   }
 }
 
+@keyframes draw-trade-line {
+  0% {
+    stroke-dashoffset: 420;
+    opacity: 0.25;
+  }
+  45%,
+  70% {
+    stroke-dashoffset: 0;
+    opacity: 1;
+  }
+  100% {
+    stroke-dashoffset: -420;
+    opacity: 0.25;
+  }
+}
+
 /* ─── BlockNote Journal Editor ──────────────────────────────────────────────── */
 .blocknote-note-editor .bn-root {
   --bn-colors-editor-background: var(--background);
