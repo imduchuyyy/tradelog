@@ -10,6 +10,16 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart";
 import { DatePicker } from "@/components/ui/date-picker";
 import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
   Drawer,
   DrawerContent,
   DrawerDescription,
@@ -268,11 +278,7 @@ export function DashboardTab({ trades }: DashboardTabProps) {
                       </div>
                       <div className="flex items-center gap-2 sm:justify-end">
                         <p className={cn("font-mono text-lg font-bold", moneyColor(result))}>{formatMoney(result)}</p>
-                        <form action={deleteTrade.bind(null, trade.id)} onClick={(event) => event.stopPropagation()}>
-                          <Button variant="ghost" size="icon-sm" className="text-muted-foreground hover:text-destructive">
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </form>
+                        <DeleteTradeDialog tradeId={trade.id} symbol={trade.symbol} />
                       </div>
                     </div>
                   </div>
@@ -283,6 +289,44 @@ export function DashboardTab({ trades }: DashboardTabProps) {
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+function DeleteTradeDialog({ tradeId, symbol }: { tradeId: string; symbol: string }) {
+  const t = useTranslations("dashboard.manualJournal");
+
+  return (
+    <Dialog>
+      <DialogTrigger
+        render={
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-sm"
+            className="text-muted-foreground hover:text-destructive"
+            onClick={(event) => event.stopPropagation()}
+          />
+        }
+      >
+        <Trash2 className="h-4 w-4" />
+      </DialogTrigger>
+      <DialogContent onClick={(event) => event.stopPropagation()}>
+        <DialogHeader>
+          <DialogTitle>{t("deleteConfirmTitle")}</DialogTitle>
+          <DialogDescription>{t("deleteConfirmDescription", { symbol })}</DialogDescription>
+        </DialogHeader>
+        <DialogFooter>
+          <DialogClose render={<Button type="button" variant="outline" />}>
+            {t("cancelDelete")}
+          </DialogClose>
+          <form action={deleteTrade.bind(null, tradeId)} onSubmit={(event) => event.stopPropagation()}>
+            <Button type="submit" variant="destructive">
+              {t("confirmDelete")}
+            </Button>
+          </form>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 

@@ -300,7 +300,11 @@
       "symbolPlaceholder": "NQ, ES, AAPL...",
       "createSymbol": "Create #{symbol}",
       "noSymbolHistory": "No symbol history",
-      "pastedImage": "pasted image"
+      "pastedImage": "pasted image",
+      "deleteConfirmTitle": "Delete journal entry?",
+      "deleteConfirmDescription": "This will permanently delete the #{symbol} journal entry and its notes. This action cannot be undone.",
+      "cancelDelete": "Cancel",
+      "confirmDelete": "Delete entry"
     },
     "journal": {
       "journalTrade": "Journal Trade",

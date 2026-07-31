@@ -8,6 +8,10 @@ const globalForPrisma = globalThis as unknown as {
 };
 
 function createPrismaClient() {
+  if (process.env.NODE_ENV === "production" && !process.env.DATABASE_URL) {
+    throw new Error("DATABASE_URL is required in production");
+  }
+
   const dbUrl = process.env.DATABASE_URL || "file:./dev.db";
 
   // 1. Check if we are using PostgreSQL
@@ -22,7 +26,6 @@ function createPrismaClient() {
     ? path.resolve(/*turbopackIgnore: true*/ process.cwd(), dbUrl.replace("file:", "").replace("./", ""))
     : dbUrl;
 
-  console.log("Connecting to Local SQLite at:", dbPath);
   const adapter = new PrismaBetterSqlite3({ url: dbPath });
   return new PrismaClient({ adapter });
 }

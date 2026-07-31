@@ -300,7 +300,11 @@
       "symbolPlaceholder": "NQ, ES, AAPL...",
       "createSymbol": "Tạo #{symbol}",
       "noSymbolHistory": "Chưa có lịch sử cặp giao dịch",
-      "pastedImage": "ảnh đã dán"
+      "pastedImage": "ảnh đã dán",
+      "deleteConfirmTitle": "Xóa nhật ký này?",
+      "deleteConfirmDescription": "Nhật ký #{symbol} và toàn bộ ghi chú sẽ bị xóa vĩnh viễn. Hành động này không thể hoàn tác.",
+      "cancelDelete": "Hủy",
+      "confirmDelete": "Xóa nhật ký"
     },
     "journal": {
       "journalTrade": "Nhật ký Lệnh",

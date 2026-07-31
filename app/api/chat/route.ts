@@ -2,22 +2,9 @@ import { openai } from "@ai-sdk/openai";
 import { streamText, tool, convertToModelMessages, stepCountIs } from "ai";
 import { z } from "zod";
 import { auth } from "@/lib/auth";
-import Database from "better-sqlite3";
-import path from "node:path";
+import { prisma } from "@/lib/prisma";
 
 export const maxDuration = 30;
-
-/**
- * Get a read-only better-sqlite3 connection for AI SQL queries.
- * The DB path is resolved from DATABASE_URL the same way prisma.ts does.
- */
-function getReadOnlyDb() {
-  const dbUrl = process.env.DATABASE_URL || "file:./dev.db";
-  const dbPath = dbUrl.startsWith("file:")
-    ? path.resolve(/*turbopackIgnore: true*/ process.cwd(), dbUrl.replace("file:", "").replace("./", ""))
-    : dbUrl;
-  return new Database(dbPath, { readonly: true });
-}
 
 export async function POST(req: Request) {
   const session = await auth();
@@ -35,19 +22,19 @@ export async function POST(req: Request) {
   };
   const languageName = languageNames[locale] || "English";
 
-  const systemPrompt = `You are the Zennote AI Analytics Assistant. You help traders analyze their manual trading journal using SQL queries and computations.
+  const systemPrompt = `You are the Zennote AI Analytics Assistant. You help traders analyze their manual trading journal using SQL queries.
 
 IMPORTANT: You MUST respond in ${languageName}. All your analysis, explanations, and advice should be written in ${languageName}.
 
-CONTEXT: The user has a SQLite database with their trading data. You have two powerful tools:
+CONTEXT: The user has a PostgreSQL database with their trading data. You have one tool:
 1. **queryTrades** — Run READ-ONLY SQL queries against the database
-2. **compute** — Run JavaScript computations on data you've fetched
 
-DATABASE SCHEMA (SQLite):
-- **Trade** table: id, userId, symbol (TEXT tag, e.g. "BTCUSDT"), result (REAL money result, positive or negative), note (TEXT BlockNote JSON), setup (TEXT JSON array of setup tags), session (TEXT: "sydney"|"tokyo"|"london"|"new_york"), tradeDate (DATETIME), createdAt (DATETIME), updatedAt (DATETIME)
+DATABASE SCHEMA (PostgreSQL):
+- **"Trade"** table: id, "userId", symbol (TEXT tag, e.g. "BTCUSDT"), result (DOUBLE PRECISION money result, positive or negative), note (TEXT BlockNote JSON), setup (TEXT JSON array of setup tags), session (TEXT: "sydney"|"tokyo"|"london"|"new_york"), "tradeDate" (TIMESTAMP), "createdAt" (TIMESTAMP), "updatedAt" (TIMESTAMP)
 
 IMPORTANT RULES:
-- ALWAYS filter by userId = '${userId}' in your queries to ensure data isolation
+- ALWAYS query the quoted table name "Trade" and quoted camelCase columns like "userId" and "tradeDate".
+- ALWAYS filter by "userId" = '${userId}' in your queries to ensure data isolation
 - ONLY use SELECT statements — never INSERT, UPDATE, DELETE, DROP, ALTER, etc.
 - Dates are stored as ISO strings; use date functions carefully
 - result is the money result of each trade. Positive values are wins, negative values are losses.
@@ -95,7 +82,7 @@ COMMON QUERIES YOU SHOULD KNOW:
         }),
         execute: async ({ sql, description }: { sql: string; description: string }) => {
           try {
-            // Security: only allow SELECT
+            // Security: only allow one read-only statement scoped to the current user.
             const trimmed = sql.trim().toUpperCase();
             if (
               !trimmed.startsWith("SELECT") &&
@@ -103,6 +90,20 @@ COMMON QUERIES YOU SHOULD KNOW:
             ) {
               return {
                 error: "Only SELECT queries are allowed.",
+                description,
+              };
+            }
+
+            if (sql.replace(/;\s*$/, "").includes(";")) {
+              return {
+                error: "Only one SQL statement is allowed.",
+                description,
+              };
+            }
+
+            if (!sql.includes(userId)) {
+              return {
+                error: "Query must filter by the current userId.",
                 description,
               };
             }
@@ -124,7 +125,7 @@ COMMON QUERIES YOU SHOULD KNOW:
             for (const keyword of dangerous) {
               // Check for the keyword as a standalone word (not inside a string)
               const regex = new RegExp(`\\b${keyword}\\b`, "i");
-              if (regex.test(sql) && !trimmed.startsWith("SELECT") && !trimmed.startsWith("WITH")) {
+              if (regex.test(sql)) {
                 return {
                   error: `Forbidden SQL keyword: ${keyword}`,
                   description,
@@ -132,66 +133,13 @@ COMMON QUERIES YOU SHOULD KNOW:
               }
             }
 
-            const db = getReadOnlyDb();
-            try {
-              const rows = db.prepare(sql).all();
-              return {
-                success: true,
-                description,
-                rowCount: rows.length,
-                rows: rows.slice(0, 200), // limit to 200 rows
-                truncated: rows.length > 200,
-              };
-            } finally {
-              db.close();
-            }
-          } catch (e: unknown) {
-            return {
-              error: e instanceof Error ? e.message : String(e),
-              description,
-            };
-          }
-        },
-      }),
-
-      compute: tool({
-        description:
-          "Run a JavaScript computation on trading data. Use this when you need to do calculations that are hard in SQL alone, like computing streaks, drawdowns, or custom metrics. The code should be a function body that returns a result. You have access to a 'data' parameter that you can pass pre-fetched query results into.",
-        inputSchema: z.object({
-          code: z
-            .string()
-            .describe(
-              "JavaScript code to evaluate. Should be a function body that returns a result. Has access to 'data' parameter."
-            ),
-          data: z
-            .any()
-            .optional()
-            .describe(
-              "Data to pass into the computation (e.g. query results from a previous tool call)"
-            ),
-          description: z
-            .string()
-            .describe(
-              "Brief description of what this computation does, e.g. 'Calculate max drawdown from cumulative PnL'"
-            ),
-        }),
-        execute: async ({
-          code,
-          data,
-          description,
-        }: {
-          code: string;
-          data?: unknown;
-          description: string;
-        }) => {
-          try {
-            // Create a sandboxed function
-            const fn = new Function("data", code);
-            const result = fn(data);
+            const rows = await prisma.$queryRawUnsafe<Record<string, unknown>[]>(sql);
             return {
               success: true,
               description,
-              result,
+              rowCount: rows.length,
+              rows: rows.slice(0, 200), // limit to 200 rows
+              truncated: rows.length > 200,
             };
           } catch (e: unknown) {
             return {

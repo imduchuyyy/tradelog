@@ -1,6 +1,3 @@
-import { mkdir, writeFile } from "node:fs/promises";
-import path from "node:path";
-import { randomUUID } from "node:crypto";
 import { auth } from "@/lib/auth";
 
 const imageExtensions: Record<string, string> = {
@@ -9,6 +6,9 @@ const imageExtensions: Record<string, string> = {
   "image/png": "png",
   "image/webp": "webp",
 };
+
+const maxImageSizeMb = 25;
+const maxImageSizeBytes = maxImageSizeMb * 1024 * 1024;
 
 export async function POST(req: Request) {
   const session = await auth();
@@ -30,15 +30,11 @@ export async function POST(req: Request) {
     return Response.json({ error: "Unsupported image type" }, { status: 400 });
   }
 
-  if (image.size > 5 * 1024 * 1024) {
-    return Response.json({ error: "Image must be smaller than 5MB" }, { status: 400 });
+  if (image.size > maxImageSizeBytes) {
+    return Response.json({ error: `Image must be smaller than ${maxImageSizeMb}MB` }, { status: 400 });
   }
 
-  const uploadDir = path.join(process.cwd(), "public", "uploads", "trade-notes");
-  const fileName = `${randomUUID()}.${extension}`;
+  const data = Buffer.from(await image.arrayBuffer()).toString("base64");
 
-  await mkdir(uploadDir, { recursive: true });
-  await writeFile(path.join(uploadDir, fileName), Buffer.from(await image.arrayBuffer()));
-
-  return Response.json({ url: `/uploads/trade-notes/${fileName}` });
+  return Response.json({ url: `data:${image.type};base64,${data}` });
 }
