@@ -1,0 +1,9 @@
+ALTER TABLE "Trade" ADD COLUMN "session" TEXT;
+
+UPDATE "Trade"
+SET "session" = CASE
+  WHEN EXTRACT(HOUR FROM "tradeDate" AT TIME ZONE 'UTC') >= 12 AND EXTRACT(HOUR FROM "tradeDate" AT TIME ZONE 'UTC') < 21 THEN 'new_york'
+  WHEN EXTRACT(HOUR FROM "tradeDate" AT TIME ZONE 'UTC') >= 7 AND EXTRACT(HOUR FROM "tradeDate" AT TIME ZONE 'UTC') < 12 THEN 'london'
+  WHEN EXTRACT(HOUR FROM "tradeDate" AT TIME ZONE 'UTC') >= 0 AND EXTRACT(HOUR FROM "tradeDate" AT TIME ZONE 'UTC') < 7 THEN 'tokyo'
+  ELSE 'sydney'
+END;

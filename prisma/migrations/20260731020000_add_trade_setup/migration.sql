@@ -1,0 +1,1 @@
+ALTER TABLE "Trade" ADD COLUMN "setup" TEXT;

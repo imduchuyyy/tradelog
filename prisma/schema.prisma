@@ -1,6 +1,6 @@
 generator client {
   provider = "prisma-client"
-  output   = "../src/generated/prisma"
+  output   = "../generated/prisma"
 }
 
 datasource db {
@@ -28,8 +28,6 @@ model User {
 
   accounts     Account[]
   sessions     Session[]
-  exchanges    Exchange[]
-  setups       Setup[]
   trades       Trade[]
   chatSessions ChatSession[]
 }
@@ -70,105 +68,23 @@ model VerificationToken {
   @@unique([identifier, token])
 }
 
-// ─── Exchange connections ─────────────────────────────────────────────────────
-
-model Exchange {
-  id         String    @id @default(cuid())
-  userId     String
-  name       String // e.g. "Binance", "Bybit", "OKX"
-  apiKey     String
-  apiSecret  String
-  passphrase String? // some exchanges require this
-  isActive   Boolean   @default(true)
-  lastSyncAt DateTime? // when trades were last synced
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  trades Trade[]
-}
-
-// ─── Trade Setups ─────────────────────────────────────────────────────────────
-
-model Setup {
-  id     String  @id @default(cuid())
-  userId String
-  name   String
-  color  String? // hex color for UI display
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  trades Trade[]
-}
-
 // ─── Trades ───────────────────────────────────────────────────────────────────
 
 model Trade {
-  id         String  @id @default(cuid())
-  userId     String
-  exchangeId String?
-
-  // External exchange trade ID for deduplication
-  externalTradeId String? @unique
-
-  // Core trade fields
-  symbol     String // e.g. "BTCUSDT"
-  side       String // "long" | "short"
-  status     String @default("open") // "open" | "closed" | "cancelled"
-  entryPrice Float
-  exitPrice  Float?
-  quantity   Float
-  pnl        Float? // realized PnL
-  pnlPercent Float? // PnL as percentage
-  fees       Float? @default(0)
-
-  // ─── Entry journaling fields ────────────────────────────────────────────
-  marketCondition String? // "trending" | "range" | "50/50" | "counter_trend"
-  session         String? // "sydney" | "tokyo" | "london" | "new_york"
-  entryTimeframe  String? // "1m" | "5m" | "15m" | "1h" | "4h" | "1d" etc.
-  riskRewardRatio Float?  // planned R:R e.g. 2.5
-  confidenceLevel Int?    // 0-10 scale
-  notes           String? // general notes
-
-  // ─── Post-trade / closing fields ────────────────────────────────────────
-  exitReason      String? // why SL/TP was hit or manual exit reason
-  lessons         String? // lessons learned from this trade
-  disciplineLevel Int?    // 0-10 how disciplined was the execution
-  holdingTime     Int?    // holding duration in minutes (auto-computed from entryDate/exitDate)
-  mae             Float?  // Maximum Adverse Excursion (max drawdown during trade)
-  mfe             Float?  // Maximum Favorable Excursion (max unrealized profit during trade)
-
-  // Sync metadata
-  needsJournal Boolean   @default(false) // true when synced from exchange, awaiting user journal entry
-  isNew        Boolean   @default(false) // true when just synced, for highlight in UI
-  syncedAt     DateTime? // when last synced from exchange
-
-  entryDate DateTime  @default(now())
-  exitDate  DateTime?
+  id        String   @id @default(cuid())
+  userId    String
+  symbol    String
+  direction String
+  result    Float
+  note      String?
+  setup     String?
+  session   String?
+  tradeDate DateTime @default(now())
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  exchange Exchange? @relation(fields: [exchangeId], references: [id], onDelete: SetNull)
-  setups   Setup[]   // M:N — a trade can have multiple setups
-  files    TradeFile[]
-}
-
-model TradeFile {
-  id      String @id @default(cuid())
-  tradeId String
-  name    String
-  url     String
-  type    String // "image" | "document" | "screenshot"
-  size    Int?
-
-  createdAt DateTime @default(now())
-
-  trade Trade @relation(fields: [tradeId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 // ─── AI Chat ──────────────────────────────────────────────────────────────────

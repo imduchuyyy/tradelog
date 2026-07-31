@@ -1,0 +1,780 @@
+"use client";
+
+import { useMemo, useRef, useState } from "react";
+import { Plus, Trash2, X } from "lucide-react";
+import { format } from "date-fns";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart";
+import { DatePicker } from "@/components/ui/date-picker";
+import {
+  Drawer,
+  DrawerContent,
+  DrawerDescription,
+  DrawerFooter,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerTrigger,
+} from "@/components/ui/drawer";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { DynamicBlockNoteNoteEditor } from "@/components/dashboard/dynamic-blocknote-note-editor";
+import { createTrade, deleteTrade, updateTrade } from "@/app/actions";
+import {
+  type BlockNoteDocument,
+  type PastedBlockNoteImage,
+  emptyBlockNoteDocument,
+  isEmptyBlockNoteDocument,
+  parseBlockNoteDocument,
+  replacePastedImageUrls,
+} from "@/lib/blocknote-note";
+import { normalizeSetupTag, parseSetupTags, serializeSetupTags } from "@/lib/trade-setup";
+import { getTradeResult, type Trade } from "@/lib/trade";
+import { cn } from "@/lib/utils";
+import { Area, AreaChart, Bar, BarChart, CartesianGrid, Line, LineChart, ReferenceLine, XAxis, YAxis } from "recharts";
+
+interface DashboardTabProps {
+  trades: Trade[];
+}
+
+const pnlChartConfig = {
+  cumulativePnl: {
+    label: "Cumulative PnL",
+    color: "var(--success)",
+  },
+} satisfies ChartConfig;
+
+const dailyPnlChartConfig = {
+  dailyPnl: {
+    label: "Daily PnL",
+    color: "var(--foreground)",
+  },
+} satisfies ChartConfig;
+
+const winRateChartConfig = {
+  winRate: {
+    label: "Win Rate %",
+    color: "var(--success)",
+  },
+} satisfies ChartConfig;
+
+export function DashboardTab({ trades }: DashboardTabProps) {
+  const defaultEndDate = useMemo(() => formatDateInput(new Date()), []);
+  const defaultStartDate = useMemo(() => {
+    const date = new Date();
+    date.setMonth(date.getMonth() - 1);
+    return formatDateInput(date);
+  }, []);
+  const [selectedSymbols, setSelectedSymbols] = useState<string[]>([]);
+  const [selectedSessions, setSelectedSessions] = useState<string[]>([]);
+  const [selectedSetups, setSelectedSetups] = useState<string[]>([]);
+  const [startDate, setStartDate] = useState(defaultStartDate);
+  const [endDate, setEndDate] = useState(defaultEndDate);
+
+  const allSortedTrades = useMemo(
+    () => [...trades].sort((a, b) => new Date(b.tradeDate).getTime() - new Date(a.tradeDate).getTime()),
+    [trades]
+  );
+  const symbolOptions = useMemo(
+    () => Array.from(new Set(allSortedTrades.map((trade) => trade.symbol.trim().toUpperCase()).filter(Boolean))).sort(),
+    [allSortedTrades]
+  );
+  const setupOptions = useMemo(
+    () => Array.from(new Set(allSortedTrades.flatMap((trade) => parseSetupTags(trade.setup)))).sort((a, b) => a.localeCompare(b)),
+    [allSortedTrades]
+  );
+  const sessionOptions = useMemo(
+    () => Array.from(new Set(allSortedTrades.map((trade) => trade.session).filter(Boolean) as string[])).sort(),
+    [allSortedTrades]
+  );
+  const sortedTrades = useMemo(() => {
+    const start = startDate ? new Date(`${startDate}T00:00:00`) : null;
+    const end = endDate ? new Date(`${endDate}T23:59:59.999`) : null;
+
+    return allSortedTrades.filter((trade) => {
+      const tradeDate = new Date(trade.tradeDate);
+      const tradeSetups = parseSetupTags(trade.setup);
+
+      if (start && tradeDate < start) return false;
+      if (end && tradeDate > end) return false;
+      if (selectedSymbols.length > 0 && !selectedSymbols.includes(trade.symbol.trim().toUpperCase())) return false;
+      if (selectedSessions.length > 0 && (!trade.session || !selectedSessions.includes(trade.session))) return false;
+      if (selectedSetups.length > 0 && !selectedSetups.some((setup) => tradeSetups.includes(setup))) return false;
+
+      return true;
+    });
+  }, [allSortedTrades, endDate, selectedSessions, selectedSetups, selectedSymbols, startDate]);
+
+  const stats = useMemo(() => {
+    const total = sortedTrades.reduce((sum, trade) => sum + getTradeResult(trade), 0);
+    const wins = sortedTrades.filter((trade) => getTradeResult(trade) > 0).length;
+    const losses = sortedTrades.filter((trade) => getTradeResult(trade) < 0).length;
+    const winRate = sortedTrades.length ? (wins / sortedTrades.length) * 100 : 0;
+    const best = sortedTrades.reduce((max, trade) => Math.max(max, getTradeResult(trade)), 0);
+    const worst = sortedTrades.reduce((min, trade) => Math.min(min, getTradeResult(trade)), 0);
+    const grossProfit = sortedTrades.reduce((sum, trade) => {
+      const result = getTradeResult(trade);
+      return result > 0 ? sum + result : sum;
+    }, 0);
+    const grossLoss = Math.abs(
+      sortedTrades.reduce((sum, trade) => {
+        const result = getTradeResult(trade);
+        return result < 0 ? sum + result : sum;
+      }, 0)
+    );
+    const profitFactor = grossLoss > 0 ? grossProfit / grossLoss : grossProfit > 0 ? Infinity : 0;
+
+    return { total, wins, losses, winRate, best, worst, profitFactor };
+  }, [sortedTrades]);
+  const chartData = useMemo(() => buildChartData(sortedTrades), [sortedTrades]);
+
+  const formatMoney = (value: number) => `${value >= 0 ? "+" : "-"}$${Math.abs(value).toFixed(2)}`;
+  const moneyColor = (value: number) => value >= 0 ? "text-success" : "text-destructive";
+  const formatProfitFactor = (value: number) => Number.isFinite(value) ? value.toFixed(2) : "∞";
+
+  return (
+    <div className="mx-auto max-w-5xl space-y-6">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h2 className="text-2xl font-bold tracking-tight">Manual Journal</h2>
+          <p className="text-sm text-muted-foreground">Add the trade result and the lesson. Nothing else is required.</p>
+        </div>
+        <TradeDialog title="Add Journal Entry" symbolOptions={symbolOptions} setupOptions={setupOptions}>
+          <Button className="gap-2">
+            <Plus className="h-4 w-4" />
+            Add Entry
+          </Button>
+        </TradeDialog>
+      </div>
+
+      <Card className="border-border bg-card">
+        <CardHeader>
+          <CardTitle className="text-base">Filters</CardTitle>
+        </CardHeader>
+        <CardContent className="grid gap-3 md:grid-cols-2 lg:grid-cols-5">
+          <FilterMenu label="Symbols" options={symbolOptions} selected={selectedSymbols} onChange={setSelectedSymbols} formatOption={(option) => `#${option}`} />
+          <FilterMenu label="Sessions" options={sessionOptions} selected={selectedSessions} onChange={setSelectedSessions} formatOption={formatSession} />
+          <FilterMenu label="Setups" options={setupOptions} selected={selectedSetups} onChange={setSelectedSetups} />
+          <div className="space-y-2">
+            <Label>From</Label>
+            <FilterDatePicker value={startDate} onChange={setStartDate} />
+          </div>
+          <div className="space-y-2">
+            <Label>To</Label>
+            <FilterDatePicker value={endDate} onChange={setEndDate} />
+          </div>
+        </CardContent>
+      </Card>
+
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+        <StatCard label="Total PnL" value={formatMoney(stats.total)} className={moneyColor(stats.total)} tone={stats.total >= 0 ? "success" : "danger"} />
+        <StatCard label="Entries" value={String(sortedTrades.length)} tone="neutral" />
+        <StatCard label="Win Rate" value={`${stats.winRate.toFixed(1)}%`} helper={`${stats.wins} wins / ${stats.losses} losses`} tone={stats.winRate >= 50 ? "success" : "danger"} />
+        <StatCard label="Profit Factor" value={formatProfitFactor(stats.profitFactor)} helper="Gross profit / gross loss" tone={stats.profitFactor >= 1 ? "success" : "danger"} />
+        <StatCard
+          label="Best / Worst"
+          value={
+            <span className="inline-flex flex-wrap gap-1.5">
+              <span className="text-success">{formatMoney(stats.best)}</span>
+              <span className="text-muted-foreground">/</span>
+              <span className="text-destructive">{formatMoney(stats.worst)}</span>
+            </span>
+          }
+          tone="mixed"
+        />
+      </div>
+
+      <div className="grid gap-3 lg:grid-cols-2">
+        <Card className="border-border bg-card">
+          <CardHeader>
+            <CardTitle className="text-base">PnL Curve</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ChartContainer config={pnlChartConfig} className="h-72 w-full aspect-auto">
+              <AreaChart data={chartData} margin={{ left: 8, right: 8, top: 8, bottom: 0 }}>
+                <CartesianGrid vertical={false} />
+                <XAxis dataKey="date" tickLine={false} axisLine={false} tickMargin={8} minTickGap={24} />
+                <YAxis tickLine={false} axisLine={false} tickMargin={8} width={48} />
+                <ReferenceLine y={0} stroke="var(--border)" />
+                <ChartTooltip content={<ChartTooltipContent />} />
+                <Area type="monotone" dataKey="cumulativePnl" stroke="var(--color-cumulativePnl)" fill="var(--color-cumulativePnl)" fillOpacity={0.18} strokeWidth={2} />
+              </AreaChart>
+            </ChartContainer>
+          </CardContent>
+        </Card>
+
+        <Card className="border-border bg-card">
+          <CardHeader>
+            <CardTitle className="text-base">Daily PnL</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ChartContainer config={dailyPnlChartConfig} className="h-72 w-full aspect-auto">
+              <BarChart data={chartData} margin={{ left: 8, right: 8, top: 8, bottom: 0 }}>
+                <CartesianGrid vertical={false} />
+                <XAxis dataKey="date" tickLine={false} axisLine={false} tickMargin={8} minTickGap={24} />
+                <YAxis tickLine={false} axisLine={false} tickMargin={8} width={48} />
+                <ReferenceLine y={0} stroke="var(--border)" />
+                <ChartTooltip content={<ChartTooltipContent />} />
+                <Bar dataKey="dailyPnl" fill="var(--color-dailyPnl)" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ChartContainer>
+          </CardContent>
+        </Card>
+
+        <Card className="border-border bg-card lg:col-span-2">
+          <CardHeader>
+            <CardTitle className="text-base">Win Rate Trend</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ChartContainer config={winRateChartConfig} className="h-72 w-full aspect-auto">
+              <LineChart data={chartData} margin={{ left: 8, right: 8, top: 8, bottom: 0 }}>
+                <CartesianGrid vertical={false} />
+                <XAxis dataKey="date" tickLine={false} axisLine={false} tickMargin={8} minTickGap={24} />
+                <YAxis tickLine={false} axisLine={false} tickMargin={8} width={40} domain={[0, 100]} />
+                <ChartTooltip content={<ChartTooltipContent />} />
+                <Line type="monotone" dataKey="winRate" stroke="var(--color-winRate)" strokeWidth={2} dot={false} />
+              </LineChart>
+            </ChartContainer>
+          </CardContent>
+        </Card>
+      </div>
+
+      <Card className="border-border bg-card">
+        <CardHeader>
+          <CardTitle className="text-base">Journal Entries</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {sortedTrades.length === 0 ? (
+            <div className="rounded-md border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
+              No entries yet. Add your first manual journal entry.
+            </div>
+          ) : (
+            sortedTrades.map((trade) => {
+              const result = Number(trade.result);
+              return (
+                <TradeDialog key={trade.id} title="Edit Journal Entry" trade={trade} symbolOptions={symbolOptions} setupOptions={setupOptions} triggerClassName="block">
+                  <div className="rounded-md border border-border bg-background p-4 transition-colors hover:border-ring/60 hover:bg-muted/20">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                      <div className="space-y-2">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <Badge variant="outline">#{trade.symbol}</Badge>
+                          <Badge
+                            variant="outline"
+                            className={cn(
+                              trade.direction === "long"
+                                ? "border-success/30 text-success"
+                                : "border-destructive/30 text-destructive"
+                            )}
+                          >
+                            {trade.direction.toUpperCase()}
+                          </Badge>
+                          <span className="text-xs text-muted-foreground">
+                            {new Date(trade.tradeDate).toLocaleString()}
+                          </span>
+                          {trade.session && <Badge variant="outline">{formatSession(trade.session)}</Badge>}
+                          {parseSetupTags(trade.setup).map((setup) => (
+                            <Badge key={setup} variant="secondary">{setup}</Badge>
+                          ))}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 sm:justify-end">
+                        <p className={cn("font-mono text-lg font-bold", moneyColor(result))}>{formatMoney(result)}</p>
+                        <form action={deleteTrade.bind(null, trade.id)} onClick={(event) => event.stopPropagation()}>
+                          <Button variant="ghost" size="icon-sm" className="text-muted-foreground hover:text-destructive">
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </form>
+                      </div>
+                    </div>
+                  </div>
+                </TradeDialog>
+              );
+            })
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+function StatCard({
+  label,
+  value,
+  helper,
+  className,
+  tone = "neutral",
+}: {
+  label: string;
+  value: React.ReactNode;
+  helper?: string;
+  className?: string;
+  tone?: "success" | "danger" | "neutral" | "mixed";
+}) {
+  return (
+    <Card
+      className={cn(
+        "relative overflow-hidden border-border bg-card",
+        tone === "success" && "border-success/20 bg-success/[0.03]",
+        tone === "danger" && "border-destructive/20 bg-destructive/[0.03]",
+        tone === "neutral" && "bg-muted/10",
+        tone === "mixed" && "bg-gradient-to-br from-success/[0.04] via-card to-destructive/[0.04]"
+      )}
+    >
+      <div
+        className={cn(
+          "absolute inset-x-0 top-0 h-px",
+          tone === "success" && "bg-success/70",
+          tone === "danger" && "bg-destructive/70",
+          tone === "neutral" && "bg-foreground/30",
+          tone === "mixed" && "bg-gradient-to-r from-success/70 via-border to-destructive/70"
+        )}
+      />
+      <CardContent className="p-4">
+        <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">{label}</p>
+        <p className={cn("mt-1 text-xl font-bold", className)}>{value}</p>
+        {helper && <p className="mt-1 text-xs text-muted-foreground">{helper}</p>}
+      </CardContent>
+    </Card>
+  );
+}
+
+function buildChartData(trades: Trade[]) {
+  const groupedTrades = new Map<string, { dailyPnl: number; wins: number; entries: number }>();
+
+  [...trades]
+    .sort((a, b) => new Date(a.tradeDate).getTime() - new Date(b.tradeDate).getTime())
+    .forEach((trade) => {
+      const date = formatDateInput(new Date(trade.tradeDate));
+      const result = getTradeResult(trade);
+      const current = groupedTrades.get(date) || { dailyPnl: 0, wins: 0, entries: 0 };
+
+      groupedTrades.set(date, {
+        dailyPnl: current.dailyPnl + result,
+        wins: current.wins + (result > 0 ? 1 : 0),
+        entries: current.entries + 1,
+      });
+    });
+
+  let cumulativePnl = 0;
+  let cumulativeWins = 0;
+  let cumulativeEntries = 0;
+
+  return Array.from(groupedTrades.entries()).map(([date, value]) => {
+    cumulativePnl += value.dailyPnl;
+    cumulativeWins += value.wins;
+    cumulativeEntries += value.entries;
+
+    return {
+      date,
+      dailyPnl: Number(value.dailyPnl.toFixed(2)),
+      cumulativePnl: Number(cumulativePnl.toFixed(2)),
+      winRate: Number(((cumulativeWins / cumulativeEntries) * 100).toFixed(1)),
+    };
+  });
+}
+
+function FilterMenu({
+  label,
+  options,
+  selected,
+  onChange,
+  formatOption = (option) => option,
+}: {
+  label: string;
+  options: string[];
+  selected: string[];
+  onChange: (selected: string[]) => void;
+  formatOption?: (option: string) => string;
+}) {
+  function toggleOption(option: string) {
+    onChange(selected.includes(option) ? selected.filter((item) => item !== option) : [...selected, option]);
+  }
+
+  return (
+    <div className="space-y-2">
+      <Label>{label}</Label>
+      <DropdownMenu>
+        <DropdownMenuTrigger render={<Button type="button" variant="outline" className="w-full justify-between font-normal" />}>
+          <span className="truncate">
+            {selected.length > 0 ? `${selected.length} selected` : `All ${label.toLowerCase()}`}
+          </span>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="start" className="max-h-64">
+          {selected.length > 0 && (
+            <DropdownMenuItem onClick={() => onChange([])}>
+              Clear {label.toLowerCase()}
+            </DropdownMenuItem>
+          )}
+          {options.length === 0 ? (
+            <DropdownMenuItem disabled>No options</DropdownMenuItem>
+          ) : (
+            options.map((option) => (
+              <DropdownMenuItem key={option} onClick={() => toggleOption(option)}>
+                <span className="w-4 text-xs">{selected.includes(option) ? "✓" : ""}</span>
+                {formatOption(option)}
+              </DropdownMenuItem>
+            ))
+          )}
+        </DropdownMenuContent>
+      </DropdownMenu>
+      {selected.length > 0 && (
+        <div className="flex flex-wrap gap-1">
+          {selected.map((option) => (
+            <Badge key={option} variant="secondary">{formatOption(option)}</Badge>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function TradeDialog({
+  title,
+  trade,
+  symbolOptions,
+  setupOptions,
+  triggerClassName,
+  children,
+}: {
+  title: string;
+  trade?: Trade;
+  symbolOptions: string[];
+  setupOptions: string[];
+  triggerClassName?: string;
+  children: React.ReactNode;
+}) {
+  const [open, setOpen] = useState(false);
+  const initialNoteDocument = useMemo(() => parseBlockNoteDocument(trade?.note), [trade?.note]);
+  const [noteValue, setNoteValue] = useState<BlockNoteDocument>(initialNoteDocument);
+  const [pendingImages, setPendingImages] = useState<PastedBlockNoteImage[]>([]);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const keepNoteOnCloseRef = useRef(false);
+  const action = trade ? updateTrade.bind(null, trade.id) : createTrade;
+  const symbolInputId = `symbol-${trade?.id || "new"}`;
+
+  function handleOpenChange(nextOpen: boolean) {
+    if (!nextOpen) {
+      pendingImages.forEach((image) => URL.revokeObjectURL(image.previewUrl));
+      setPendingImages([]);
+      setSubmitError(null);
+
+      if (!keepNoteOnCloseRef.current) {
+        setNoteValue(initialNoteDocument);
+      }
+
+      keepNoteOnCloseRef.current = false;
+    }
+
+    setOpen(nextOpen);
+  }
+
+  async function uploadImage(image: File) {
+    const formData = new FormData();
+    formData.append("image", image);
+
+    const response = await fetch("/api/trade-note-images", {
+      method: "POST",
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const data = (await response.json().catch(() => null)) as { error?: string } | null;
+      throw new Error(data?.error || "Could not upload image");
+    }
+
+    return (await response.json()) as { url: string };
+  }
+
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setSubmitting(true);
+    setSubmitError(null);
+
+    try {
+      const formData = new FormData(event.currentTarget);
+      const finalNote = await replacePastedImageUrls(noteValue, pendingImages, uploadImage);
+
+      formData.set("note", isEmptyBlockNoteDocument(finalNote) ? "" : JSON.stringify(finalNote));
+      await action(formData);
+      pendingImages.forEach((image) => URL.revokeObjectURL(image.previewUrl));
+      setPendingImages([]);
+      setNoteValue(finalNote);
+      keepNoteOnCloseRef.current = true;
+      handleOpenChange(false);
+    } catch (err) {
+      setSubmitError(err instanceof Error ? err.message : "Could not save entry");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <Drawer open={open} onOpenChange={handleOpenChange}>
+      <DrawerTrigger nativeButton={false} render={<div className={cn("inline-flex", triggerClassName)} />}>
+        {children}
+      </DrawerTrigger>
+      <DrawerContent>
+        <DrawerHeader>
+          <DrawerTitle>{title}</DrawerTitle>
+          <DrawerDescription>Capture the result, setup context, and screenshots in one structured journal entry.</DrawerDescription>
+        </DrawerHeader>
+        <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col">
+          <div className="flex-1 space-y-6 overflow-y-auto px-6 py-5">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor={symbolInputId}>Symbol</Label>
+                <SymbolCombobox id={symbolInputId} defaultValue={trade?.symbol || ""} options={symbolOptions} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor={`result-${trade?.id || "new"}`}>Result</Label>
+                <Input id={`result-${trade?.id || "new"}`} name="result" type="number" step="0.01" defaultValue={trade?.result ?? ""} placeholder="+100 or -50" required />
+              </div>
+              <div className="space-y-2 sm:col-span-2">
+                <Label>Timestamp</Label>
+                <TimestampPicker defaultValue={trade?.tradeDate} />
+                <p className="text-xs text-muted-foreground">Trading session is detected automatically from this timestamp.</p>
+              </div>
+              <div className="space-y-2 sm:col-span-2">
+                <Label>Setup</Label>
+                <SetupCombobox defaultValue={parseSetupTags(trade?.setup)} options={setupOptions} />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Direction</Label>
+              <div className="grid grid-cols-2 gap-2">
+                {(["long", "short"] as const).map((direction) => (
+                  <label key={direction} className="flex cursor-pointer items-center gap-2 rounded-md border border-border px-3 py-2 text-sm">
+                    <input type="radio" name="direction" value={direction} defaultChecked={(trade?.direction || "long") === direction} />
+                    {direction.toUpperCase()}
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor={`note-${trade?.id || "new"}`}>Note</Label>
+              <input type="hidden" name="note" value={isEmptyBlockNoteDocument(noteValue) ? "" : JSON.stringify(noteValue)} />
+              <DynamicBlockNoteNoteEditor
+                key={`${trade?.id || "new"}-${open ? "open" : "closed"}`}
+                initialContent={noteValue.length ? noteValue : emptyBlockNoteDocument}
+                onChange={setNoteValue}
+                onPasteImage={(image) => setPendingImages((images) => [...images, image])}
+                className="min-h-[22rem]"
+              />
+            </div>
+
+            {submitError && <p className="text-xs text-destructive">{submitError}</p>}
+          </div>
+          <DrawerFooter>
+            <Button type="submit" className="w-full sm:w-auto" disabled={submitting}>
+              {submitting ? "Saving..." : "Save Entry"}
+            </Button>
+          </DrawerFooter>
+        </form>
+      </DrawerContent>
+    </Drawer>
+  );
+}
+
+function formatDateTimeLocal(value?: Date | string) {
+  const date = value ? new Date(value) : new Date();
+  const offsetDate = new Date(date.getTime() - date.getTimezoneOffset() * 60_000);
+
+  return offsetDate.toISOString().slice(0, 16);
+}
+
+function formatDateInput(value: Date) {
+  const offsetDate = new Date(value.getTime() - value.getTimezoneOffset() * 60_000);
+
+  return offsetDate.toISOString().slice(0, 10);
+}
+
+function TimestampPicker({ defaultValue }: { defaultValue?: Date | string }) {
+  const [date, setDate] = useState(() => (defaultValue ? new Date(defaultValue) : new Date()));
+
+  function selectDate(nextDate?: Date) {
+    if (!nextDate) return;
+
+    const nextValue = new Date(date);
+    nextValue.setFullYear(nextDate.getFullYear(), nextDate.getMonth(), nextDate.getDate());
+    setDate(nextValue);
+  }
+
+  function selectTime(time: string) {
+    const [hours, minutes] = time.split(":").map(Number);
+
+    if (!Number.isFinite(hours) || !Number.isFinite(minutes)) return;
+
+    const nextValue = new Date(date);
+    nextValue.setHours(hours, minutes, 0, 0);
+    setDate(nextValue);
+  }
+
+  return (
+    <div className="grid gap-2 sm:grid-cols-[1fr_8rem]">
+      <input type="hidden" name="tradeDate" value={formatDateTimeLocal(date)} />
+      <DatePicker date={date} onSelect={selectDate} className="justify-start gap-2 text-left font-normal" />
+      <Input
+        type="time"
+        value={format(date, "HH:mm")}
+        onChange={(event) => selectTime(event.target.value)}
+        aria-label="Trade time"
+        required
+      />
+    </div>
+  );
+}
+
+function FilterDatePicker({ value, onChange }: { value: string; onChange: (value: string) => void }) {
+  const date = value ? new Date(`${value}T00:00:00`) : undefined;
+
+  function selectDate(nextDate?: Date) {
+    if (!nextDate) return;
+
+    onChange(formatDateInput(nextDate));
+  }
+
+  return (
+    <DatePicker date={date} onSelect={selectDate} className="w-full justify-start gap-2 text-left font-normal" />
+  );
+}
+
+function formatSession(session: string) {
+  return session
+    .split("_")
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+}
+
+function SetupCombobox({ defaultValue, options }: { defaultValue: string[]; options: string[] }) {
+  const [selectedSetups, setSelectedSetups] = useState(defaultValue);
+  const [value, setValue] = useState("");
+  const [open, setOpen] = useState(false);
+  const normalizedValue = normalizeSetupTag(value);
+  const filteredOptions = options.filter(
+    (option) => !selectedSetups.includes(option) && option.toLowerCase().includes(normalizedValue.toLowerCase())
+  );
+  const canCreate = normalizedValue && !selectedSetups.includes(normalizedValue) && !options.includes(normalizedValue);
+
+  function addSetup(setup: string) {
+    const normalizedSetup = normalizeSetupTag(setup);
+
+    if (!normalizedSetup || selectedSetups.includes(normalizedSetup)) return;
+
+    setSelectedSetups([...selectedSetups, normalizedSetup].sort((a, b) => a.localeCompare(b)));
+    setValue("");
+    setOpen(false);
+  }
+
+  function removeSetup(setup: string) {
+    setSelectedSetups(selectedSetups.filter((selectedSetup) => selectedSetup !== setup));
+  }
+
+  return (
+    <div className="space-y-2">
+      <input type="hidden" name="setup" value={serializeSetupTags(selectedSetups) || ""} />
+      <div className="relative flex min-h-9 flex-wrap items-center gap-1.5 rounded-[5px] border border-border bg-transparent px-2 py-1.5 focus-within:border-[#333333] focus-within:ring-1 focus-within:ring-[#333333]/50">
+        {selectedSetups.map((setup) => (
+          <Badge key={setup} variant="secondary" className="gap-1 pr-1">
+            {setup}
+            <button
+              type="button"
+              onClick={() => removeSetup(setup)}
+              className="rounded-sm text-muted-foreground hover:text-foreground"
+              aria-label={`Remove ${setup}`}
+            >
+              <X className="h-3 w-3" />
+            </button>
+          </Badge>
+        ))}
+        <input
+          value={value}
+          onChange={(event) => {
+            setValue(event.target.value);
+            setOpen(true);
+          }}
+          onFocus={() => setOpen(true)}
+          onBlur={() => window.setTimeout(() => setOpen(false), 100)}
+          onKeyDown={(event) => {
+            if (event.key === "Enter") {
+              event.preventDefault();
+              addSetup(value);
+            }
+          }}
+          placeholder={selectedSetups.length ? "Add setup..." : "Breakout, Reversal..."}
+          className="h-6 min-w-32 flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground/60"
+        />
+        {open && (
+          <div className="absolute top-full left-0 z-50 mt-1 max-h-56 w-full overflow-y-auto rounded-[6px] border border-border bg-popover p-1 text-popover-foreground shadow-md">
+            {canCreate && (
+              <button type="button" className="flex w-full items-center rounded-md px-1.5 py-1 text-left text-sm hover:bg-accent hover:text-accent-foreground" onMouseDown={(event) => event.preventDefault()} onClick={() => addSetup(normalizedValue)}>
+                Create {normalizedValue}
+              </button>
+            )}
+            {filteredOptions.map((setup) => (
+              <button key={setup} type="button" className="flex w-full items-center rounded-md px-1.5 py-1 text-left text-sm hover:bg-accent hover:text-accent-foreground" onMouseDown={(event) => event.preventDefault()} onClick={() => addSetup(setup)}>
+                {setup}
+              </button>
+            ))}
+            {filteredOptions.length === 0 && !canCreate && (
+              <div className="px-1.5 py-1 text-sm text-muted-foreground">{value ? "No matching setup" : "No setup history"}</div>
+            )}
+          </div>
+        )}
+      </div>
+      <p className="text-xs text-muted-foreground">Select existing setup tags or create new ones.</p>
+    </div>
+  );
+}
+
+function SymbolCombobox({ id, defaultValue, options }: { id: string; defaultValue: string; options: string[] }) {
+  const [value, setValue] = useState(defaultValue);
+  const [open, setOpen] = useState(false);
+  const normalizedValue = value.trim().toUpperCase();
+  const filteredOptions = options.filter((symbol) => symbol.includes(normalizedValue));
+  const exactMatch = options.some((symbol) => symbol === normalizedValue);
+
+  function selectSymbol(symbol: string) {
+    setValue(symbol);
+    setOpen(false);
+  }
+
+  return (
+    <DropdownMenu open={open} onOpenChange={setOpen}>
+      <DropdownMenuTrigger nativeButton={false} render={<div className="w-full" />}>
+        <Input
+          id={id}
+          name="symbol"
+          value={value}
+          onChange={(event) => {
+            setValue(event.target.value);
+            setOpen(true);
+          }}
+          onFocus={() => setOpen(true)}
+          placeholder="BTCUSDT"
+          autoComplete="off"
+          required
+        />
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="start" className="max-h-56">
+        {normalizedValue && !exactMatch && (
+          <DropdownMenuItem onClick={() => selectSymbol(normalizedValue)}>
+            Create #{normalizedValue}
+          </DropdownMenuItem>
+        )}
+        {filteredOptions.map((symbol) => (
+          <DropdownMenuItem key={symbol} onClick={() => selectSymbol(symbol)}>
+            #{symbol}
+          </DropdownMenuItem>
+        ))}
+        {filteredOptions.length === 0 && !normalizedValue && (
+          <DropdownMenuItem disabled>No symbol history</DropdownMenuItem>
+        )}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
