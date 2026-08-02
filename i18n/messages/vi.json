@@ -38,6 +38,7 @@
       "features": "Tính năng",
       "analytics": "Phân tích",
       "pricing": "Bảng giá",
+      "blog": "Blog",
       "login": "Đăng nhập",
       "getStarted": "Bắt đầu"
     },
@@ -126,6 +127,12 @@
       "privacy": "Quyền riêng tư",
       "contact": "Liên hệ",
       "rights": "Bảo lưu mọi quyền."
+    },
+    "blog": {
+      "sectionLabel": "Blog",
+      "title": "Bài viết mới nhất từ đội ngũ",
+      "subtitle": "Tin tức, hướng dẫn và phân tích chuyên sâu về giao dịch, thị trường và xây dựng thói quen tốt hơn.",
+      "minRead": "phút đọc"
     }
   },
   "login": {
@@ -273,6 +280,10 @@
       "winRateTrend": "Xu hướng tỷ lệ thắng",
       "journalEntries": "Nhật ký Giao dịch",
       "noEntries": "Chưa có nhật ký. Hãy thêm nhật ký giao dịch đầu tiên.",
+      "noFilteredEntries": "Không có nhật ký nào khớp với bộ lọc.",
+      "pageOf": "Trang {current} / {total}",
+      "previousPage": "Trước",
+      "nextPage": "Sau",
       "selectedCount": "Đã chọn {count}",
       "allLabel": "Tất cả {label}",
       "clearLabel": "Xóa {label}",

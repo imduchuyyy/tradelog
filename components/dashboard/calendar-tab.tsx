@@ -120,19 +120,21 @@ export function CalendarTab({ trades }: CalendarTabProps) {
               const dateKey = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
               const pnl = dailyPnl[dateKey];
               const hasData = pnl !== undefined;
-              const isToday =
-                new Date().toISOString().split("T")[0] === dateKey;
+              const todayKey = new Date().toISOString().split("T")[0];
+              const isToday = todayKey === dateKey;
+              const isFuture = dateKey > todayKey;
 
               return (
                 <div
                   key={dateKey}
                   className={cn(
-                    "relative flex min-h-[70px] flex-col items-center rounded-[4px] border p-1.5 text-sm transition-colors",
+                    "relative flex min-h-[76px] flex-col items-center rounded-[4px] border p-2 text-sm transition-colors",
                     isToday
-                      ? "border-foreground/20 bg-muted"
+                      ? "border-foreground/25 bg-muted"
                       : "border-border",
-                    hasData && pnl > 0 && "bg-success/5",
-                    hasData && pnl < 0 && "bg-destructive/5"
+                    hasData && pnl > 0 && "border-success/20 bg-success/5",
+                    hasData && pnl < 0 && "border-destructive/20 bg-destructive/5",
+                    isFuture && !isToday && "opacity-40"
                   )}
                 >
                   <span
@@ -140,12 +142,14 @@ export function CalendarTab({ trades }: CalendarTabProps) {
                       "text-xs font-mono",
                       isToday
                         ? "font-bold text-foreground"
-                        : "text-muted-foreground"
+                        : hasData
+                          ? "text-foreground/80"
+                          : "text-muted-foreground"
                     )}
                   >
                     {day}
                   </span>
-                  {hasData && (
+                  {hasData ? (
                     <span
                       className={cn(
                         "mt-auto text-xs font-mono font-medium",
@@ -154,6 +158,10 @@ export function CalendarTab({ trades }: CalendarTabProps) {
                     >
                       {pnl > 0 ? "+" : ""}${pnl.toFixed(0)}
                     </span>
+                  ) : (
+                    !isFuture && (
+                      <span className="mt-auto h-1 w-1 rounded-full bg-border" />
+                    )
                   )}
                 </div>
               );

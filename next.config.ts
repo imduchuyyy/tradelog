@@ -13,6 +13,14 @@ const nextConfig: NextConfig = {
   turbopack: {
     root: process.cwd(),
   },
+  images: {
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "raw.githubusercontent.com",
+      },
+    ],
+  },
 };
 
 export default withNextIntl(nextConfig);

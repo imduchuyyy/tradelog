@@ -18,7 +18,7 @@ export function LandingNav() {
   const commonT = useTranslations("common");
 
   return (
-    <nav className="sticky top-0 z-50 border-b border-border bg-background/90 backdrop-blur-xl">
+    <nav className="sticky top-0 z-50 border-b border-border bg-background">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="flex h-16 items-center justify-between">
           {/* Logo */}
@@ -51,17 +51,18 @@ export function LandingNav() {
             >
               {t("pricing")}
             </a>
+            <Link
+              href="/blog"
+              className="text-sm text-muted-foreground transition-colors hover:text-foreground"
+            >
+              {t("blog")}
+            </Link>
           </div>
 
           {/* Actions */}
           <div className="hidden items-center gap-2 md:flex">
             <LanguageSwitcher />
             <ThemeToggle />
-            <Link href="/login">
-              <Button variant="ghost" size="sm">
-                {t("login")}
-              </Button>
-            </Link>
             <Link href="/login">
               <Button size="sm" className="bg-foreground text-background hover:bg-foreground/90 border-0">
                 {t("getStarted")}
@@ -105,16 +106,17 @@ export function LandingNav() {
             >
               {t("pricing")}
             </a>
+            <Link
+              href="/blog"
+              className="block rounded-lg px-3 py-2 text-sm text-muted-foreground hover:bg-muted"
+            >
+              {t("blog")}
+            </Link>
             <div className="flex items-center gap-2 pt-4">
               <LanguageSwitcher />
               <ThemeToggle />
             </div>
             <div className="flex flex-col gap-2 pt-2">
-              <Link href="/login">
-                <Button variant="ghost" size="sm" className="w-full">
-                  {t("login")}
-                </Button>
-              </Link>
               <Link href="/login">
                 <Button size="sm" className="w-full bg-foreground text-background hover:bg-foreground/90 border-0">
                   {t("getStarted")}

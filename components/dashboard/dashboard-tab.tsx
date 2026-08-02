@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useRef, useState } from "react";
-import { Plus, Trash2, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, Trash2, X } from "lucide-react";
 import { format } from "date-fns";
 import { useTranslations } from "next-intl";
 import { Badge } from "@/components/ui/badge";
@@ -97,6 +97,25 @@ export function DashboardTab({ trades }: DashboardTabProps) {
       return true;
     });
   }, [allSortedTrades, endDate, selectedSessions, selectedSetups, selectedSymbols, startDate]);
+
+  const ENTRIES_PER_PAGE = 10;
+  const [page, setPage] = useState(1);
+  const totalPages = Math.max(1, Math.ceil(sortedTrades.length / ENTRIES_PER_PAGE));
+
+  const filterSignature = [selectedSymbols, selectedSessions, selectedSetups, startDate, endDate]
+    .map((value) => JSON.stringify(value))
+    .join("|");
+  const [lastFilterSignature, setLastFilterSignature] = useState(filterSignature);
+  if (filterSignature !== lastFilterSignature) {
+    setLastFilterSignature(filterSignature);
+    setPage(1);
+  }
+
+  const currentPage = Math.min(page, totalPages);
+  const paginatedTrades = useMemo(
+    () => sortedTrades.slice((currentPage - 1) * ENTRIES_PER_PAGE, currentPage * ENTRIES_PER_PAGE),
+    [sortedTrades, currentPage]
+  );
 
   const stats = useMemo(() => {
     const total = sortedTrades.reduce((sum, trade) => sum + getTradeResult(trade), 0);
@@ -255,10 +274,10 @@ export function DashboardTab({ trades }: DashboardTabProps) {
         <CardContent className="space-y-3">
           {sortedTrades.length === 0 ? (
             <div className="rounded-md border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
-              {t("noEntries")}
+              {allSortedTrades.length === 0 ? t("noEntries") : t("noFilteredEntries")}
             </div>
           ) : (
-            sortedTrades.map((trade) => {
+            paginatedTrades.map((trade) => {
               const result = Number(trade.result);
               return (
                 <TradeDialog key={trade.id} title={t("editJournalEntry")} trade={trade} symbolOptions={symbolOptions} setupOptions={setupOptions} triggerClassName="block">
@@ -285,6 +304,34 @@ export function DashboardTab({ trades }: DashboardTabProps) {
                 </TradeDialog>
               );
             })
+          )}
+
+          {sortedTrades.length > 0 && totalPages > 1 && (
+            <div className="flex items-center justify-between pt-1">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="gap-1.5"
+                disabled={currentPage <= 1}
+                onClick={() => setPage(Math.max(1, currentPage - 1))}
+              >
+                <ChevronLeft className="h-4 w-4" />
+                {t("previousPage")}
+              </Button>
+              <p className="text-xs text-muted-foreground">{t("pageOf", { current: currentPage, total: totalPages })}</p>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="gap-1.5"
+                disabled={currentPage >= totalPages}
+                onClick={() => setPage(Math.min(totalPages, currentPage + 1))}
+              >
+                {t("nextPage")}
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
           )}
         </CardContent>
       </Card>

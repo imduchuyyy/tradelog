@@ -38,6 +38,7 @@
       "features": "Features",
       "analytics": "Analytics",
       "pricing": "Pricing",
+      "blog": "Blog",
       "login": "Log In",
       "getStarted": "Get Started"
     },
@@ -126,6 +127,12 @@
       "privacy": "Privacy",
       "contact": "Contact",
       "rights": "All rights reserved."
+    },
+    "blog": {
+      "sectionLabel": "Blog",
+      "title": "Latest from the team",
+      "subtitle": "News, guides, and deep dives on trading, markets, and building better habits.",
+      "minRead": "min read"
     }
   },
   "login": {
@@ -273,6 +280,10 @@
       "winRateTrend": "Win Rate Trend",
       "journalEntries": "Journal Entries",
       "noEntries": "No entries yet. Add your first manual journal entry.",
+      "noFilteredEntries": "No entries match your filters.",
+      "pageOf": "Page {current} of {total}",
+      "previousPage": "Previous",
+      "nextPage": "Next",
       "selectedCount": "{count} selected",
       "allLabel": "All {label}",
       "clearLabel": "Clear {label}",
