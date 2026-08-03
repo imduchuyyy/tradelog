@@ -2,6 +2,7 @@
 
 import "@blocknote/core/fonts/inter.css";
 import "@blocknote/mantine/style.css";
+import { en } from "@blocknote/core/locales";
 import { BlockNoteView } from "@blocknote/mantine";
 import { useCreateBlockNote } from "@blocknote/react";
 import { useTheme } from "next-themes";
@@ -29,6 +30,10 @@ export default function BlockNoteNoteEditor({
   const editor = useCreateBlockNote(
     {
       initialContent,
+      dictionary: {
+        ...en,
+        placeholders: { ...en.placeholders, default: t("notePlaceholder") },
+      },
       pasteHandler: ({ event, editor, defaultPasteHandler }) => {
         const images = Array.from(event.clipboardData?.files || []).filter((file) => file.type.startsWith("image/"));
 

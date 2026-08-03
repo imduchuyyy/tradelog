@@ -1,7 +1,8 @@
 "use client";
 
 import { useMemo, useRef, useState } from "react";
-import { ChevronLeft, ChevronRight, Plus, Trash2, X } from "lucide-react";
+import { useFormStatus } from "react-dom";
+import { ChevronLeft, ChevronRight, ImagePlus, Loader2, Plus, SlidersHorizontal, Tags, Trash2, X } from "lucide-react";
 import { format } from "date-fns";
 import { useTranslations } from "next-intl";
 import { Badge } from "@/components/ui/badge";
@@ -135,10 +136,19 @@ export function DashboardTab({ trades }: DashboardTabProps) {
       }, 0)
     );
     const profitFactor = grossLoss > 0 ? grossProfit / grossLoss : grossProfit > 0 ? Infinity : 0;
+    const avgWin = wins > 0 ? grossProfit / wins : 0;
+    const avgLoss = losses > 0 ? grossLoss / losses : 0;
+    const winRateFraction = sortedTrades.length ? wins / sortedTrades.length : 0;
+    const lossRateFraction = sortedTrades.length ? losses / sortedTrades.length : 0;
+    const expectancy = winRateFraction * avgWin - lossRateFraction * avgLoss;
 
-    return { total, wins, losses, winRate, best, worst, profitFactor };
+    return { total, wins, losses, winRate, best, worst, profitFactor, avgWin, avgLoss, expectancy };
   }, [sortedTrades]);
   const chartData = useMemo(() => buildChartData(sortedTrades), [sortedTrades]);
+  const drawdownStats = useMemo(() => computeDrawdownStats(chartData), [chartData]);
+  const consistencyScore = useMemo(() => computeConsistencyScore(chartData), [chartData]);
+  const recoveryFactor =
+    drawdownStats.maxDrawdown > 0 ? stats.total / drawdownStats.maxDrawdown : stats.total > 0 ? Infinity : 0;
   const pnlChartConfig = useMemo(
     () => ({ cumulativePnl: { label: t("cumulativePnl"), color: "var(--success)" } }) satisfies ChartConfig,
     [t]
@@ -155,6 +165,7 @@ export function DashboardTab({ trades }: DashboardTabProps) {
   const formatMoney = (value: number) => `${value >= 0 ? "+" : "-"}$${Math.abs(value).toFixed(2)}`;
   const moneyColor = (value: number) => value >= 0 ? "text-success" : "text-destructive";
   const formatProfitFactor = (value: number) => Number.isFinite(value) ? value.toFixed(2) : "∞";
+  const formatRatio = (value: number) => Number.isFinite(value) ? `${value.toFixed(2)}x` : "∞";
 
   return (
     <div className="mx-auto max-w-5xl space-y-6">
@@ -171,6 +182,10 @@ export function DashboardTab({ trades }: DashboardTabProps) {
         </TradeDialog>
       </div>
 
+      {allSortedTrades.length === 0 ? (
+        <FirstRunEmptyState symbolOptions={symbolOptions} setupOptions={setupOptions} />
+      ) : (
+        <>
       <Card className="border-border bg-card">
         <CardHeader>
           <CardTitle className="text-base">{t("filters")}</CardTitle>
@@ -205,6 +220,35 @@ export function DashboardTab({ trades }: DashboardTabProps) {
             </span>
           }
           tone="mixed"
+        />
+      </div>
+
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <StatCard
+          label={t("maxDrawdown")}
+          value={formatMoney(-drawdownStats.maxDrawdown)}
+          helper={t("maxDrawdownHelper", { days: drawdownStats.maxDurationDays })}
+          className="text-destructive"
+          tone={drawdownStats.maxDrawdown > 0 ? "danger" : "neutral"}
+        />
+        <StatCard
+          label={t("consistencyScore")}
+          value={`${consistencyScore.toFixed(0)}%`}
+          helper={t("consistencyScoreHelper")}
+          tone={consistencyScore >= 70 ? "success" : consistencyScore >= 40 ? "neutral" : "danger"}
+        />
+        <StatCard
+          label={t("expectancy")}
+          value={formatMoney(stats.expectancy)}
+          helper={t("expectancyHelper")}
+          className={moneyColor(stats.expectancy)}
+          tone={stats.expectancy >= 0 ? "success" : "danger"}
+        />
+        <StatCard
+          label={t("recoveryFactor")}
+          value={formatRatio(recoveryFactor)}
+          helper={t("recoveryFactorHelper")}
+          tone={recoveryFactor >= 5 ? "success" : recoveryFactor >= 2 ? "neutral" : "danger"}
         />
       </div>
 
@@ -274,7 +318,7 @@ export function DashboardTab({ trades }: DashboardTabProps) {
         <CardContent className="space-y-3">
           {sortedTrades.length === 0 ? (
             <div className="rounded-md border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
-              {allSortedTrades.length === 0 ? t("noEntries") : t("noFilteredEntries")}
+              {t("noFilteredEntries")}
             </div>
           ) : (
             paginatedTrades.map((trade) => {
@@ -335,6 +379,8 @@ export function DashboardTab({ trades }: DashboardTabProps) {
           )}
         </CardContent>
       </Card>
+        </>
+      )}
     </div>
   );
 }
@@ -367,14 +413,96 @@ function DeleteTradeDialog({ tradeId, symbol }: { tradeId: string; symbol: strin
             {t("cancelDelete")}
           </DialogClose>
           <form action={deleteTrade.bind(null, tradeId)} onSubmit={(event) => event.stopPropagation()}>
-            <Button type="submit" variant="destructive">
-              {t("confirmDelete")}
-            </Button>
+            <DeleteSubmitButton label={t("confirmDelete")} pendingLabel={t("deleting")} />
           </form>
         </DialogFooter>
       </DialogContent>
     </Dialog>
   );
+}
+
+function FirstRunEmptyState({ symbolOptions, setupOptions }: { symbolOptions: string[]; setupOptions: string[] }) {
+  const t = useTranslations("dashboard.manualJournal");
+  const tips = [
+    { icon: ImagePlus, title: t("tipPasteImageTitle"), description: t("tipPasteImageDescription") },
+    { icon: Tags, title: t("tipSetupTitle"), description: t("tipSetupDescription") },
+    { icon: SlidersHorizontal, title: t("tipFilterTitle"), description: t("tipFilterDescription") },
+  ];
+
+  return (
+    <div className="rounded-md border border-dashed border-border p-8 text-center">
+      <p className="text-sm font-semibold">{t("firstRunTitle")}</p>
+      <p className="mx-auto mt-1 max-w-md text-sm text-muted-foreground">{t("firstRunSubtitle")}</p>
+      <div className="mx-auto mt-6 grid max-w-2xl gap-3 text-left sm:grid-cols-3">
+        {tips.map((tip) => (
+          <div key={tip.title} className="space-y-1.5 rounded-md border border-border bg-background p-3">
+            <tip.icon className="h-4 w-4 text-muted-foreground" />
+            <p className="text-xs font-medium">{tip.title}</p>
+            <p className="text-xs text-muted-foreground">{tip.description}</p>
+          </div>
+        ))}
+      </div>
+      <TradeDialog title={t("addJournalEntry")} symbolOptions={symbolOptions} setupOptions={setupOptions}>
+        <Button className="mt-6 gap-2">
+          <Plus className="h-4 w-4" />
+          {t("addFirstEntry")}
+        </Button>
+      </TradeDialog>
+    </div>
+  );
+}
+
+function DeleteSubmitButton({ label, pendingLabel }: { label: string; pendingLabel: string }) {
+  const { pending } = useFormStatus();
+
+  return (
+    <Button type="submit" variant="destructive" disabled={pending} className="gap-2">
+      {pending && <Loader2 className="h-4 w-4 animate-spin" />}
+      {pending ? pendingLabel : label}
+    </Button>
+  );
+}
+
+function computeDrawdownStats(chartData: { date: string; cumulativePnl: number }[]) {
+  let peak = 0;
+  let peakDate: string | null = null;
+  let drawdownStartDate: string | null = null;
+  let maxDrawdown = 0;
+  let maxDurationDays = 0;
+
+  chartData.forEach((point) => {
+    if (point.cumulativePnl >= peak) {
+      peak = point.cumulativePnl;
+      peakDate = point.date;
+      drawdownStartDate = null;
+      return;
+    }
+
+    if (!drawdownStartDate) drawdownStartDate = peakDate;
+
+    const drawdown = peak - point.cumulativePnl;
+    if (drawdown > maxDrawdown) maxDrawdown = drawdown;
+
+    if (drawdownStartDate) {
+      const days = Math.round(
+        (new Date(point.date).getTime() - new Date(drawdownStartDate).getTime()) / (24 * 60 * 60 * 1000)
+      );
+      if (days > maxDurationDays) maxDurationDays = days;
+    }
+  });
+
+  return { maxDrawdown, maxDurationDays };
+}
+
+function computeConsistencyScore(chartData: { dailyPnl: number }[]) {
+  const profitableDays = chartData.filter((point) => point.dailyPnl > 0);
+  const totalProfitDays = profitableDays.reduce((sum, point) => sum + point.dailyPnl, 0);
+
+  if (totalProfitDays <= 0) return 0;
+
+  const bestDay = Math.max(...profitableDays.map((point) => point.dailyPnl));
+
+  return Math.max(0, 100 - (bestDay / totalProfitDays) * 100);
 }
 
 function StatCard({

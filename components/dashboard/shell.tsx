@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { signOut } from "next-auth/react";
-import { BarChart3, Calendar, LayoutDashboard, LogOut, Settings, Sparkles, X, Minus } from "lucide-react";
+import { BarChart3, Calendar, LayoutDashboard, Loader2, LogOut, Settings, Sparkles, X, Minus } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -34,6 +34,7 @@ export function DashboardShell({ user, trades }: DashboardShellProps) {
   const commonT = useTranslations("common");
   const [activeTab, setActiveTab] = useState<Tab>("dashboard");
   const [chatOpen, setChatOpen] = useState(false);
+  const [signingOut, setSigningOut] = useState(false);
 
   const tabs: { id: Tab; label: string; icon: React.ElementType }[] = [
     { id: "dashboard", label: t("tabs.journal"), icon: LayoutDashboard },
@@ -81,8 +82,16 @@ export function DashboardShell({ user, trades }: DashboardShellProps) {
               <p className="truncate text-sm font-medium">{user.name || t("trader")}</p>
               <p className="truncate text-xs text-muted-foreground">{user.email}</p>
             </div>
-            <Button variant="ghost" size="icon-xs" onClick={() => signOut({ callbackUrl: "/" })}>
-              <LogOut className="h-3.5 w-3.5" />
+            <Button
+              variant="ghost"
+              size="icon-xs"
+              disabled={signingOut}
+              onClick={() => {
+                setSigningOut(true);
+                signOut({ callbackUrl: "/" }).finally(() => setSigningOut(false));
+              }}
+            >
+              {signingOut ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <LogOut className="h-3.5 w-3.5" />}
             </Button>
           </div>
         </div>

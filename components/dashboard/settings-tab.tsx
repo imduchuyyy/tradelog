@@ -1,7 +1,8 @@
 "use client";
 
+import { useState } from "react";
 import { useTheme } from "next-themes";
-import { Globe, Monitor, Moon, Sun } from "lucide-react";
+import { Globe, Loader2, Monitor, Moon, Sun } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -41,6 +42,7 @@ export function SettingsTab({ user }: SettingsTabProps) {
   const { setTheme, theme: currentTheme } = useTheme();
   const router = useRouter();
   const pathname = usePathname();
+  const [pendingLocale, setPendingLocale] = useState<Locale | null>(null);
 
   return (
     <div className="mx-auto max-w-2xl space-y-6">
@@ -57,20 +59,27 @@ export function SettingsTab({ user }: SettingsTabProps) {
               <button
                 key={language.code}
                 type="button"
+                disabled={pendingLocale !== null}
                 onClick={async () => {
-                  const formData = new FormData();
-                  formData.set("locale", language.code);
-                  formData.set("theme", user.theme);
-                  await updateUserSettings(formData);
-                  router.replace(pathname, { locale: language.code });
+                  setPendingLocale(language.code);
+                  try {
+                    const formData = new FormData();
+                    formData.set("locale", language.code);
+                    formData.set("theme", user.theme);
+                    await updateUserSettings(formData);
+                    router.replace(pathname, { locale: language.code });
+                  } finally {
+                    setPendingLocale(null);
+                  }
                 }}
                 className={cn(
-                  "rounded-md border px-4 py-2 text-sm font-medium transition-colors",
+                  "flex items-center gap-2 rounded-md border px-4 py-2 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-60",
                   user.locale === language.code
                     ? "border-foreground/30 bg-muted text-foreground"
                     : "border-border bg-background text-muted-foreground hover:bg-muted hover:text-foreground"
                 )}
               >
+                {pendingLocale === language.code && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
                 {language.label}
               </button>
             ))}
