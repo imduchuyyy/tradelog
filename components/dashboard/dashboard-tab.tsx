@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart";
-import { DatePicker } from "@/components/ui/date-picker";
+import { DatePicker, DateRangePicker } from "@/components/ui/date-picker";
 import {
   Dialog,
   DialogClose,
@@ -190,17 +190,26 @@ export function DashboardTab({ trades }: DashboardTabProps) {
         <CardHeader>
           <CardTitle className="text-base">{t("filters")}</CardTitle>
         </CardHeader>
-        <CardContent className="grid gap-3 md:grid-cols-2 lg:grid-cols-5">
+        <CardContent className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
           <FilterMenu label={t("symbols")} options={symbolOptions} selected={selectedSymbols} onChange={setSelectedSymbols} formatOption={(option) => `#${option}`} />
           <FilterMenu label={t("sessions")} options={sessionOptions} selected={selectedSessions} onChange={setSelectedSessions} formatOption={formatSession} />
           <FilterMenu label={t("setups")} options={setupOptions} selected={selectedSetups} onChange={setSelectedSetups} />
           <div className="space-y-2">
-            <Label>{t("from")}</Label>
-            <FilterDatePicker value={startDate} onChange={setStartDate} />
-          </div>
-          <div className="space-y-2">
-            <Label>{t("to")}</Label>
-            <FilterDatePicker value={endDate} onChange={setEndDate} />
+            <Label>{t("dateRange")}</Label>
+            <DateRangePicker
+              from={startDate ? new Date(`${startDate}T00:00:00`) : undefined}
+              to={endDate ? new Date(`${endDate}T00:00:00`) : undefined}
+              onSelect={({ from, to }) => {
+                setStartDate(from ? formatDateInput(from) : "");
+                setEndDate(to ? formatDateInput(to) : "");
+              }}
+              presets={[
+                { label: t("preset1w"), days: 7 },
+                { label: t("preset1m"), days: 30 },
+                { label: t("preset3m"), days: 90 },
+              ]}
+              className="w-full justify-start gap-2 text-left font-normal"
+            />
           </div>
         </CardContent>
       </Card>
@@ -720,11 +729,11 @@ function TradeDialog({
   }
 
   return (
-    <Drawer open={open} onOpenChange={handleOpenChange}>
+    <Drawer open={open} onOpenChange={handleOpenChange} swipeDirection="right">
       <DrawerTrigger nativeButton={false} render={<div className={cn("inline-flex", triggerClassName)} />}>
         {children}
       </DrawerTrigger>
-      <DrawerContent>
+      <DrawerContent className="[--drawer-content-width:90vw]! sm:[--drawer-content-width:50vw]!">
         <DrawerHeader>
           <DrawerTitle>{title}</DrawerTitle>
           <DrawerDescription>{t("dialogDescription")}</DrawerDescription>
@@ -823,20 +832,6 @@ function TimestampPicker({ defaultValue }: { defaultValue?: Date | string }) {
         required
       />
     </div>
-  );
-}
-
-function FilterDatePicker({ value, onChange }: { value: string; onChange: (value: string) => void }) {
-  const date = value ? new Date(`${value}T00:00:00`) : undefined;
-
-  function selectDate(nextDate?: Date) {
-    if (!nextDate) return;
-
-    onChange(formatDateInput(nextDate));
-  }
-
-  return (
-    <DatePicker date={date} onSelect={selectDate} className="w-full justify-start gap-2 text-left font-normal" />
   );
 }
 
