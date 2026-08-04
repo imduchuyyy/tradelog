@@ -18,6 +18,15 @@ export type BlogPost = BlogPostMeta & {
   content: string;
 };
 
+type RegistryEntry = {
+  slug: string;
+  title: Partial<Record<Locale, string>>;
+  categories: string[];
+  date: string;
+  readTime: number;
+  coverImage: string;
+};
+
 async function fetchRaw(pathname: string): Promise<string | null> {
   const res = await fetch(`${BLOG_REPO_RAW_BASE}/${pathname}`, {
     cache: "no-store",
@@ -30,13 +39,13 @@ async function fetchRaw(pathname: string): Promise<string | null> {
   return res.text();
 }
 
-async function getRegistrySlugs(): Promise<string[]> {
+async function getRegistry(): Promise<RegistryEntry[]> {
   const raw = await fetchRaw("registry.json");
   if (!raw) {
     return [];
   }
 
-  const { posts } = JSON.parse(raw) as { posts: string[] };
+  const { posts } = JSON.parse(raw) as { posts: RegistryEntry[] };
   return posts;
 }
 
@@ -64,14 +73,12 @@ async function readPost(slug: string, locale: Locale): Promise<BlogPost | null> 
 }
 
 export async function getAllBlogPosts(locale: Locale): Promise<BlogPostMeta[]> {
-  const slugs = await getRegistrySlugs();
-  const posts = await Promise.all(slugs.map((slug) => readPost(slug, locale)));
+  const entries = await getRegistry();
 
-  return posts
-    .filter((post): post is BlogPost => post !== null)
+  return entries
     .map(({ slug, title, categories, date, readTime, coverImage }) => ({
       slug,
-      title,
+      title: title?.[locale] ?? title?.[defaultLocale] ?? "",
       categories,
       date,
       readTime,
@@ -84,8 +91,8 @@ export async function getBlogPost(
   slug: string,
   locale: Locale
 ): Promise<BlogPost | null> {
-  const slugs = await getRegistrySlugs();
-  if (!slugs.includes(slug)) {
+  const entries = await getRegistry();
+  if (!entries.some((entry) => entry.slug === slug)) {
     return null;
   }
 
