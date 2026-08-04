@@ -3,13 +3,13 @@
 import { useMemo, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { ChevronLeft, ChevronRight, ImagePlus, Loader2, Plus, SlidersHorizontal, Tags, Trash2, X } from "lucide-react";
-import { format } from "date-fns";
+import { format, subDays } from "date-fns";
 import { useTranslations } from "next-intl";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart";
-import { DatePicker, DateRangePicker } from "@/components/ui/date-picker";
+import { DatePicker } from "@/components/ui/date-picker";
 import {
   Dialog,
   DialogClose,
@@ -54,11 +54,7 @@ interface DashboardTabProps {
 export function DashboardTab({ trades }: DashboardTabProps) {
   const t = useTranslations("dashboard.manualJournal");
   const defaultEndDate = useMemo(() => formatDateInput(new Date()), []);
-  const defaultStartDate = useMemo(() => {
-    const date = new Date();
-    date.setMonth(date.getMonth() - 1);
-    return formatDateInput(date);
-  }, []);
+  const defaultStartDate = useMemo(() => formatDateInput(subDays(new Date(), 30)), []);
   const [selectedSymbols, setSelectedSymbols] = useState<string[]>([]);
   const [selectedSessions, setSelectedSessions] = useState<string[]>([]);
   const [selectedSetups, setSelectedSetups] = useState<string[]>([]);
@@ -196,20 +192,46 @@ export function DashboardTab({ trades }: DashboardTabProps) {
           <FilterMenu label={t("setups")} options={setupOptions} selected={selectedSetups} onChange={setSelectedSetups} />
           <div className="space-y-2">
             <Label>{t("dateRange")}</Label>
-            <DateRangePicker
-              from={startDate ? new Date(`${startDate}T00:00:00`) : undefined}
-              to={endDate ? new Date(`${endDate}T00:00:00`) : undefined}
-              onSelect={({ from, to }) => {
-                setStartDate(from ? formatDateInput(from) : "");
-                setEndDate(to ? formatDateInput(to) : "");
-              }}
-              presets={[
+            {(() => {
+              const presets = [
                 { label: t("preset1w"), days: 7 },
                 { label: t("preset1m"), days: 30 },
                 { label: t("preset3m"), days: 90 },
-              ]}
-              className="w-full justify-start gap-2 text-left font-normal"
-            />
+              ];
+              const activePreset = presets.find(
+                (preset) => startDate === formatDateInput(subDays(new Date(), preset.days)) && endDate === formatDateInput(new Date())
+              );
+              const activeLabel = activePreset ? activePreset.label : t("presetAllTime");
+
+              return (
+                <DropdownMenu>
+                  <DropdownMenuTrigger render={<Button type="button" variant="outline" className="w-full justify-between font-normal" />}>
+                    {activeLabel}
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start">
+                    {presets.map((preset) => (
+                      <DropdownMenuItem
+                        key={preset.label}
+                        onClick={() => {
+                          setStartDate(formatDateInput(subDays(new Date(), preset.days)));
+                          setEndDate(formatDateInput(new Date()));
+                        }}
+                      >
+                        {preset.label}
+                      </DropdownMenuItem>
+                    ))}
+                    <DropdownMenuItem
+                      onClick={() => {
+                        setStartDate("");
+                        setEndDate("");
+                      }}
+                    >
+                      {t("presetAllTime")}
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              );
+            })()}
           </div>
         </CardContent>
       </Card>

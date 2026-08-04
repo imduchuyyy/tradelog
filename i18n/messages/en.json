@@ -269,6 +269,7 @@
       "preset1w": "Last 7 days",
       "preset1m": "Last 30 days",
       "preset3m": "Last 3 months",
+      "presetAllTime": "All time",
       "totalPnl": "Total PnL",
       "entries": "Entries",
       "winRate": "Win Rate",
