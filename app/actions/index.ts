@@ -51,7 +51,7 @@ export async function createTrade(formData: FormData) {
     },
   });
 
-  revalidatePath("/dashboard");
+  revalidatePath("/[locale]/dashboard", "page");
 }
 
 export async function updateTrade(tradeId: string, formData: FormData) {
@@ -63,7 +63,7 @@ export async function updateTrade(tradeId: string, formData: FormData) {
     data,
   });
 
-  revalidatePath("/dashboard");
+  revalidatePath("/[locale]/dashboard", "page");
 }
 
 export async function deleteTrade(tradeId: string) {
@@ -73,7 +73,7 @@ export async function deleteTrade(tradeId: string) {
     where: { id: tradeId, userId },
   });
 
-  revalidatePath("/dashboard");
+  revalidatePath("/[locale]/dashboard", "page");
 }
 
 export async function updateUserSettings(formData: FormData) {
@@ -87,7 +87,7 @@ export async function updateUserSettings(formData: FormData) {
     },
   });
 
-  revalidatePath("/dashboard");
+  revalidatePath("/[locale]/dashboard", "page");
 }
 
 export async function createChatSession() {

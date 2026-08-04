@@ -16,5 +16,5 @@ export async function completeOnboarding() {
     data: { onboarded: true },
   });
 
-  revalidatePath("/dashboard");
+  revalidatePath("/[locale]/dashboard", "page");
 }

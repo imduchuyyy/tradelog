@@ -785,13 +785,6 @@ function TradeDialog({
   );
 }
 
-function formatDateTimeLocal(value?: Date | string) {
-  const date = value ? new Date(value) : new Date();
-  const offsetDate = new Date(date.getTime() - date.getTimezoneOffset() * 60_000);
-
-  return offsetDate.toISOString().slice(0, 16);
-}
-
 function formatDateInput(value: Date) {
   const offsetDate = new Date(value.getTime() - value.getTimezoneOffset() * 60_000);
 
@@ -822,7 +815,7 @@ function TimestampPicker({ defaultValue }: { defaultValue?: Date | string }) {
 
   return (
     <div className="grid gap-2 sm:grid-cols-[1fr_8rem]">
-      <input type="hidden" name="tradeDate" value={formatDateTimeLocal(date)} />
+      <input type="hidden" name="tradeDate" value={date.toISOString()} />
       <DatePicker date={date} onSelect={selectDate} className="justify-start gap-2 text-left font-normal" />
       <Input
         type="time"
@@ -891,7 +884,10 @@ function SetupCombobox({ defaultValue, options }: { defaultValue: string[]; opti
             setOpen(true);
           }}
           onFocus={() => setOpen(true)}
-          onBlur={() => window.setTimeout(() => setOpen(false), 100)}
+          onBlur={() => {
+            if (value) addSetup(value);
+            window.setTimeout(() => setOpen(false), 100);
+          }}
           onKeyDown={(event) => {
             if (event.key === "Enter") {
               event.preventDefault();
@@ -949,6 +945,15 @@ function SymbolCombobox({ id, defaultValue, options }: { id: string; defaultValu
             setOpen(true);
           }}
           onFocus={() => setOpen(true)}
+          onBlur={() => {
+            if (normalizedValue) setValue(normalizedValue);
+          }}
+          onKeyDown={(event) => {
+            if (event.key === "Enter") {
+              event.preventDefault();
+              selectSymbol(normalizedValue);
+            }
+          }}
           placeholder={t("symbolPlaceholder")}
           autoComplete="off"
           required
