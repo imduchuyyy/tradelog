@@ -4,15 +4,26 @@ import { useState } from "react";
 import { signIn } from "next-auth/react";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { toast } from "@/components/ui/toast";
 import { useTranslations } from "next-intl";
 
 export function LoginForm() {
   const t = useTranslations("login");
+  const toastT = useTranslations("toast");
   const [signingIn, setSigningIn] = useState(false);
 
   const handleGoogleLogin = () => {
     setSigningIn(true);
-    signIn("google", { callbackUrl: "/dashboard" }).finally(() => setSigningIn(false));
+    toast
+      .promise(signIn("google", { callbackUrl: "/dashboard" }), {
+        loading: toastT("signingIn"),
+        success: toastT("signedIn"),
+        error: toastT("signInError"),
+      })
+      .catch(() => {
+        // Reported by the toast above.
+      })
+      .finally(() => setSigningIn(false));
   };
 
   return (

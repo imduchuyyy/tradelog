@@ -29,6 +29,27 @@
     "saving": "Saving...",
     "trader": "Trader"
   },
+  "toast": {
+    "entryCreating": "Saving journal entry...",
+    "entryCreated": "Journal entry saved",
+    "entryUpdating": "Updating journal entry...",
+    "entryUpdated": "Journal entry updated",
+    "entryDeleting": "Deleting journal entry...",
+    "entryDeleted": "Journal entry deleted",
+    "entryDeleteError": "Could not delete entry",
+    "settingsSaving": "Saving settings...",
+    "settingsSaved": "Settings saved",
+    "settingsError": "Could not save settings",
+    "onboardingFinishing": "Setting up your journal...",
+    "onboardingFinished": "Your journal is ready",
+    "onboardingError": "Could not finish setup",
+    "signingIn": "Signing in...",
+    "signedIn": "Signed in",
+    "signInError": "Could not sign in",
+    "signingOut": "Signing out...",
+    "signedOut": "Signed out",
+    "signOutError": "Could not sign out"
+  },
   "home": {
     "title": "Welcome to Zennote",
     "description": "Turn every trade into a clearer insight."

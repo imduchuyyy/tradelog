@@ -32,6 +32,7 @@ import {
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { toast } from "@/components/ui/toast";
 import { DynamicBlockNoteNoteEditor } from "@/components/dashboard/dynamic-blocknote-note-editor";
 import { createTrade, deleteTrade, updateTrade } from "@/app/actions";
 import {
@@ -418,6 +419,20 @@ export function DashboardTab({ trades }: DashboardTabProps) {
 
 function DeleteTradeDialog({ tradeId, symbol }: { tradeId: string; symbol: string }) {
   const t = useTranslations("dashboard.manualJournal");
+  const toastT = useTranslations("toast");
+
+  async function handleDelete() {
+    try {
+      await toast.promise(deleteTrade(tradeId), {
+        loading: toastT("entryDeleting"),
+        success: toastT("entryDeleted"),
+        error: (err: unknown) =>
+          err instanceof Error && err.message ? err.message : toastT("entryDeleteError"),
+      });
+    } catch {
+      // Reported by the toast above.
+    }
+  }
 
   return (
     <Dialog>
@@ -443,7 +458,7 @@ function DeleteTradeDialog({ tradeId, symbol }: { tradeId: string; symbol: strin
           <DialogClose render={<Button type="button" variant="outline" />}>
             {t("cancelDelete")}
           </DialogClose>
-          <form action={deleteTrade.bind(null, tradeId)} onSubmit={(event) => event.stopPropagation()}>
+          <form action={handleDelete} onSubmit={(event) => event.stopPropagation()}>
             <DeleteSubmitButton label={t("confirmDelete")} pendingLabel={t("deleting")} />
           </form>
         </DialogFooter>
@@ -684,6 +699,7 @@ function TradeDialog({
   children: React.ReactNode;
 }) {
   const t = useTranslations("dashboard.manualJournal");
+  const toastT = useTranslations("toast");
   const [open, setOpen] = useState(false);
   const initialNoteDocument = useMemo(() => parseBlockNoteDocument(trade?.note), [trade?.note]);
   const [noteValue, setNoteValue] = useState<BlockNoteDocument>(initialNoteDocument);
@@ -732,12 +748,24 @@ function TradeDialog({
     setSubmitting(true);
     setSubmitError(null);
 
-    try {
-      const formData = new FormData(event.currentTarget);
-      const finalNote = await replacePastedImageUrls(noteValue, pendingImages, uploadImage);
+    const formData = new FormData(event.currentTarget);
 
-      formData.set("note", isEmptyBlockNoteDocument(finalNote) ? "" : JSON.stringify(finalNote));
+    async function save() {
+      const note = await replacePastedImageUrls(noteValue, pendingImages, uploadImage);
+
+      formData.set("note", isEmptyBlockNoteDocument(note) ? "" : JSON.stringify(note));
       await action(formData);
+      return note;
+    }
+
+    try {
+      const finalNote = await toast.promise(save(), {
+        loading: trade ? toastT("entryUpdating") : toastT("entryCreating"),
+        success: trade ? toastT("entryUpdated") : toastT("entryCreated"),
+        error: (err: unknown) =>
+          err instanceof Error && err.message ? err.message : t("saveEntryError"),
+      });
+
       pendingImages.forEach((image) => URL.revokeObjectURL(image.previewUrl));
       setPendingImages([]);
       setNoteValue(finalNote);

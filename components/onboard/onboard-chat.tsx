@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { useRouter } from "@/i18n/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { toast } from "@/components/ui/toast";
 import { completeOnboarding } from "@/app/actions/onboard";
 
 interface OnboardConnectProps {
@@ -18,6 +19,7 @@ interface OnboardConnectProps {
 
 export function OnboardConnect({ user, locale }: OnboardConnectProps) {
   const t = useTranslations("onboard");
+  const toastT = useTranslations("toast");
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
 
@@ -39,8 +41,16 @@ export function OnboardConnect({ user, locale }: OnboardConnectProps) {
             disabled={isPending}
             onClick={() => {
               startTransition(async () => {
-                await completeOnboarding();
-                router.replace("/dashboard", { locale });
+                try {
+                  await toast.promise(completeOnboarding(), {
+                    loading: toastT("onboardingFinishing"),
+                    success: toastT("onboardingFinished"),
+                    error: toastT("onboardingError"),
+                  });
+                  router.replace("/dashboard", { locale });
+                } catch {
+                  // Reported by the toast above.
+                }
               });
             }}
           >

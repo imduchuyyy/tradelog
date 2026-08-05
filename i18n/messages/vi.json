@@ -29,6 +29,27 @@
     "saving": "Đang lưu...",
     "trader": "Trader"
   },
+  "toast": {
+    "entryCreating": "Đang lưu nhật ký...",
+    "entryCreated": "Đã lưu nhật ký",
+    "entryUpdating": "Đang cập nhật nhật ký...",
+    "entryUpdated": "Đã cập nhật nhật ký",
+    "entryDeleting": "Đang xóa nhật ký...",
+    "entryDeleted": "Đã xóa nhật ký",
+    "entryDeleteError": "Không thể xóa nhật ký",
+    "settingsSaving": "Đang lưu cài đặt...",
+    "settingsSaved": "Đã lưu cài đặt",
+    "settingsError": "Không thể lưu cài đặt",
+    "onboardingFinishing": "Đang chuẩn bị nhật ký của bạn...",
+    "onboardingFinished": "Nhật ký của bạn đã sẵn sàng",
+    "onboardingError": "Không thể hoàn tất thiết lập",
+    "signingIn": "Đang đăng nhập...",
+    "signedIn": "Đã đăng nhập",
+    "signInError": "Không thể đăng nhập",
+    "signingOut": "Đang đăng xuất...",
+    "signedOut": "Đã đăng xuất",
+    "signOutError": "Không thể đăng xuất"
+  },
   "home": {
     "title": "Chào mừng đến với Zennote",
     "description": "Biến mỗi giao dịch thành một insight rõ ràng hơn."

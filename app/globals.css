@@ -200,6 +200,76 @@
   }
 }
 
+/* ─── Toast ──────────────────────────────────────────────────────────────────── */
+.toast-viewport {
+  --toast-gap: 0.625rem;
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  left: 1rem;
+  z-index: 100;
+  outline: none;
+}
+
+@media (min-width: 640px) {
+  .toast-viewport {
+    left: auto;
+    width: 22rem;
+  }
+}
+
+.toast-root {
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 0;
+  z-index: calc(100 - var(--toast-index));
+  transform: translateX(var(--toast-swipe-movement-x))
+    translateY(
+      calc(var(--toast-swipe-movement-y) + min(var(--toast-index) * 18px, 36px))
+    )
+    scale(calc(1 - min(var(--toast-index) * 0.05, 0.15)));
+  transition:
+    transform 300ms cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 200ms ease;
+}
+
+/* Hovered / focused viewport — fan the stack out to its natural heights. */
+.toast-root[data-expanded] {
+  transform: translateX(var(--toast-swipe-movement-x))
+    translateY(
+      calc(
+        var(--toast-offset-y) + var(--toast-swipe-movement-y) +
+          var(--toast-index) * var(--toast-gap)
+      )
+    );
+}
+
+.toast-root[data-swiping] {
+  transition: none;
+}
+
+.toast-root[data-starting-style] {
+  opacity: 0;
+  transform: translateY(-1rem) scale(0.96);
+}
+
+.toast-root[data-ending-style] {
+  opacity: 0;
+}
+
+.toast-root[data-ending-style]:not([data-limited]) {
+  transform: translateY(-0.75rem) scale(0.96);
+}
+
+.toast-root[data-ending-style][data-swipe-direction="up"] {
+  transform: translateY(calc(var(--toast-swipe-movement-y) - 100%));
+}
+
+.toast-root[data-ending-style][data-swipe-direction="right"] {
+  transform: translateX(calc(var(--toast-swipe-movement-x) + 100%));
+}
+
 /* ─── BlockNote Journal Editor ──────────────────────────────────────────────── */
 .blocknote-note-editor .bn-root {
   --bn-colors-editor-background: var(--background);

@@ -6,6 +6,7 @@ import { NextIntlClientProvider, hasLocale } from "next-intl";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { notFound } from "next/navigation";
 import { ThemeProvider } from "@/components/theme-provider";
+import { Toaster } from "@/components/ui/toast";
 import { locales } from "@/i18n/config";
 import "../globals.css";
 
@@ -67,6 +68,7 @@ export default async function LocaleLayout({
         >
           <NextIntlClientProvider>
             {children}
+            <Toaster />
           </NextIntlClientProvider>
         </ThemeProvider>
         <Analytics />

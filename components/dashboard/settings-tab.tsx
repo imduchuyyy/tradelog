@@ -7,6 +7,7 @@ import { useTranslations } from "next-intl";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import { toast } from "@/components/ui/toast";
 import { updateUserSettings } from "@/app/actions";
 import { cn } from "@/lib/utils";
 import { usePathname, useRouter } from "@/i18n/navigation";
@@ -39,6 +40,7 @@ const themes = [
 export function SettingsTab({ user }: SettingsTabProps) {
   const t = useTranslations("dashboard.settingsTab");
   const commonT = useTranslations("common");
+  const toastT = useTranslations("toast");
   const { setTheme, theme: currentTheme } = useTheme();
   const router = useRouter();
   const pathname = usePathname();
@@ -66,8 +68,14 @@ export function SettingsTab({ user }: SettingsTabProps) {
                     const formData = new FormData();
                     formData.set("locale", language.code);
                     formData.set("theme", user.theme);
-                    await updateUserSettings(formData);
+                    await toast.promise(updateUserSettings(formData), {
+                      loading: toastT("settingsSaving"),
+                      success: toastT("settingsSaved"),
+                      error: toastT("settingsError"),
+                    });
                     router.replace(pathname, { locale: language.code });
+                  } catch {
+                    // Reported by the toast above.
                   } finally {
                     setPendingLocale(null);
                   }

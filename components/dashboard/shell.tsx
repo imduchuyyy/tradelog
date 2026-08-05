@@ -6,6 +6,7 @@ import { BarChart3, Calendar, LayoutDashboard, Loader2, LogOut, Settings, Sparkl
 import { useTranslations } from "next-intl";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import { toast } from "@/components/ui/toast";
 import { DashboardTab } from "@/components/dashboard/dashboard-tab";
 import { CalendarTab } from "@/components/dashboard/calendar-tab";
 import { SettingsTab } from "@/components/dashboard/settings-tab";
@@ -32,6 +33,7 @@ interface DashboardShellProps {
 export function DashboardShell({ user, trades }: DashboardShellProps) {
   const t = useTranslations("dashboard");
   const commonT = useTranslations("common");
+  const toastT = useTranslations("toast");
   const [activeTab, setActiveTab] = useState<Tab>("dashboard");
   const [chatOpen, setChatOpen] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
@@ -88,7 +90,16 @@ export function DashboardShell({ user, trades }: DashboardShellProps) {
               disabled={signingOut}
               onClick={() => {
                 setSigningOut(true);
-                signOut({ callbackUrl: "/" }).finally(() => setSigningOut(false));
+                toast
+                  .promise(signOut({ callbackUrl: "/" }), {
+                    loading: toastT("signingOut"),
+                    success: toastT("signedOut"),
+                    error: toastT("signOutError"),
+                  })
+                  .catch(() => {
+                    // Reported by the toast above.
+                  })
+                  .finally(() => setSigningOut(false));
               }}
             >
               {signingOut ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <LogOut className="h-3.5 w-3.5" />}
