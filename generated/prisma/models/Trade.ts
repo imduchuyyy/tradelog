@@ -42,6 +42,7 @@ export type TradeMinAggregateOutputType = {
   note: string | null
   setup: string | null
   session: string | null
+  direction: string | null
   tradeDate: Date | null
   createdAt: Date | null
   updatedAt: Date | null
@@ -55,6 +56,7 @@ export type TradeMaxAggregateOutputType = {
   note: string | null
   setup: string | null
   session: string | null
+  direction: string | null
   tradeDate: Date | null
   createdAt: Date | null
   updatedAt: Date | null
@@ -68,6 +70,7 @@ export type TradeCountAggregateOutputType = {
   note: number
   setup: number
   session: number
+  direction: number
   tradeDate: number
   createdAt: number
   updatedAt: number
@@ -91,6 +94,7 @@ export type TradeMinAggregateInputType = {
   note?: true
   setup?: true
   session?: true
+  direction?: true
   tradeDate?: true
   createdAt?: true
   updatedAt?: true
@@ -104,6 +108,7 @@ export type TradeMaxAggregateInputType = {
   note?: true
   setup?: true
   session?: true
+  direction?: true
   tradeDate?: true
   createdAt?: true
   updatedAt?: true
@@ -117,6 +122,7 @@ export type TradeCountAggregateInputType = {
   note?: true
   setup?: true
   session?: true
+  direction?: true
   tradeDate?: true
   createdAt?: true
   updatedAt?: true
@@ -217,6 +223,7 @@ export type TradeGroupByOutputType = {
   note: string | null
   setup: string | null
   session: string | null
+  direction: string | null
   tradeDate: Date
   createdAt: Date
   updatedAt: Date
@@ -253,6 +260,7 @@ export type TradeWhereInput = {
   note?: Prisma.StringNullableFilter<"Trade"> | string | null
   setup?: Prisma.StringNullableFilter<"Trade"> | string | null
   session?: Prisma.StringNullableFilter<"Trade"> | string | null
+  direction?: Prisma.StringNullableFilter<"Trade"> | string | null
   tradeDate?: Prisma.DateTimeFilter<"Trade"> | Date | string
   createdAt?: Prisma.DateTimeFilter<"Trade"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Trade"> | Date | string
@@ -267,6 +275,7 @@ export type TradeOrderByWithRelationInput = {
   note?: Prisma.SortOrderInput | Prisma.SortOrder
   setup?: Prisma.SortOrderInput | Prisma.SortOrder
   session?: Prisma.SortOrderInput | Prisma.SortOrder
+  direction?: Prisma.SortOrderInput | Prisma.SortOrder
   tradeDate?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
@@ -284,6 +293,7 @@ export type TradeWhereUniqueInput = Prisma.AtLeast<{
   note?: Prisma.StringNullableFilter<"Trade"> | string | null
   setup?: Prisma.StringNullableFilter<"Trade"> | string | null
   session?: Prisma.StringNullableFilter<"Trade"> | string | null
+  direction?: Prisma.StringNullableFilter<"Trade"> | string | null
   tradeDate?: Prisma.DateTimeFilter<"Trade"> | Date | string
   createdAt?: Prisma.DateTimeFilter<"Trade"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Trade"> | Date | string
@@ -298,6 +308,7 @@ export type TradeOrderByWithAggregationInput = {
   note?: Prisma.SortOrderInput | Prisma.SortOrder
   setup?: Prisma.SortOrderInput | Prisma.SortOrder
   session?: Prisma.SortOrderInput | Prisma.SortOrder
+  direction?: Prisma.SortOrderInput | Prisma.SortOrder
   tradeDate?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
@@ -319,6 +330,7 @@ export type TradeScalarWhereWithAggregatesInput = {
   note?: Prisma.StringNullableWithAggregatesFilter<"Trade"> | string | null
   setup?: Prisma.StringNullableWithAggregatesFilter<"Trade"> | string | null
   session?: Prisma.StringNullableWithAggregatesFilter<"Trade"> | string | null
+  direction?: Prisma.StringNullableWithAggregatesFilter<"Trade"> | string | null
   tradeDate?: Prisma.DateTimeWithAggregatesFilter<"Trade"> | Date | string
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"Trade"> | Date | string
   updatedAt?: Prisma.DateTimeWithAggregatesFilter<"Trade"> | Date | string
@@ -331,6 +343,7 @@ export type TradeCreateInput = {
   note?: string | null
   setup?: string | null
   session?: string | null
+  direction?: string | null
   tradeDate?: Date | string
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -345,6 +358,7 @@ export type TradeUncheckedCreateInput = {
   note?: string | null
   setup?: string | null
   session?: string | null
+  direction?: string | null
   tradeDate?: Date | string
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -357,6 +371,7 @@ export type TradeUpdateInput = {
   note?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   setup?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   session?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  direction?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   tradeDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -371,6 +386,7 @@ export type TradeUncheckedUpdateInput = {
   note?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   setup?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   session?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  direction?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   tradeDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -384,6 +400,7 @@ export type TradeCreateManyInput = {
   note?: string | null
   setup?: string | null
   session?: string | null
+  direction?: string | null
   tradeDate?: Date | string
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -396,6 +413,7 @@ export type TradeUpdateManyMutationInput = {
   note?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   setup?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   session?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  direction?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   tradeDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -409,6 +427,7 @@ export type TradeUncheckedUpdateManyInput = {
   note?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   setup?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   session?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  direction?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   tradeDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -432,6 +451,7 @@ export type TradeCountOrderByAggregateInput = {
   note?: Prisma.SortOrder
   setup?: Prisma.SortOrder
   session?: Prisma.SortOrder
+  direction?: Prisma.SortOrder
   tradeDate?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
@@ -449,6 +469,7 @@ export type TradeMaxOrderByAggregateInput = {
   note?: Prisma.SortOrder
   setup?: Prisma.SortOrder
   session?: Prisma.SortOrder
+  direction?: Prisma.SortOrder
   tradeDate?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
@@ -462,6 +483,7 @@ export type TradeMinOrderByAggregateInput = {
   note?: Prisma.SortOrder
   setup?: Prisma.SortOrder
   session?: Prisma.SortOrder
+  direction?: Prisma.SortOrder
   tradeDate?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
@@ -528,6 +550,7 @@ export type TradeCreateWithoutUserInput = {
   note?: string | null
   setup?: string | null
   session?: string | null
+  direction?: string | null
   tradeDate?: Date | string
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -540,6 +563,7 @@ export type TradeUncheckedCreateWithoutUserInput = {
   note?: string | null
   setup?: string | null
   session?: string | null
+  direction?: string | null
   tradeDate?: Date | string
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -582,6 +606,7 @@ export type TradeScalarWhereInput = {
   note?: Prisma.StringNullableFilter<"Trade"> | string | null
   setup?: Prisma.StringNullableFilter<"Trade"> | string | null
   session?: Prisma.StringNullableFilter<"Trade"> | string | null
+  direction?: Prisma.StringNullableFilter<"Trade"> | string | null
   tradeDate?: Prisma.DateTimeFilter<"Trade"> | Date | string
   createdAt?: Prisma.DateTimeFilter<"Trade"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Trade"> | Date | string
@@ -594,6 +619,7 @@ export type TradeCreateManyUserInput = {
   note?: string | null
   setup?: string | null
   session?: string | null
+  direction?: string | null
   tradeDate?: Date | string
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -606,6 +632,7 @@ export type TradeUpdateWithoutUserInput = {
   note?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   setup?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   session?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  direction?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   tradeDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -618,6 +645,7 @@ export type TradeUncheckedUpdateWithoutUserInput = {
   note?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   setup?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   session?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  direction?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   tradeDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -630,6 +658,7 @@ export type TradeUncheckedUpdateManyWithoutUserInput = {
   note?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   setup?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   session?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  direction?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   tradeDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -645,6 +674,7 @@ export type TradeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = 
   note?: boolean
   setup?: boolean
   session?: boolean
+  direction?: boolean
   tradeDate?: boolean
   createdAt?: boolean
   updatedAt?: boolean
@@ -659,6 +689,7 @@ export type TradeSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensi
   note?: boolean
   setup?: boolean
   session?: boolean
+  direction?: boolean
   tradeDate?: boolean
   createdAt?: boolean
   updatedAt?: boolean
@@ -673,6 +704,7 @@ export type TradeSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensi
   note?: boolean
   setup?: boolean
   session?: boolean
+  direction?: boolean
   tradeDate?: boolean
   createdAt?: boolean
   updatedAt?: boolean
@@ -687,12 +719,13 @@ export type TradeSelectScalar = {
   note?: boolean
   setup?: boolean
   session?: boolean
+  direction?: boolean
   tradeDate?: boolean
   createdAt?: boolean
   updatedAt?: boolean
 }
 
-export type TradeOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "userId" | "symbol" | "result" | "note" | "setup" | "session" | "tradeDate" | "createdAt" | "updatedAt", ExtArgs["result"]["trade"]>
+export type TradeOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "userId" | "symbol" | "result" | "note" | "setup" | "session" | "direction" | "tradeDate" | "createdAt" | "updatedAt", ExtArgs["result"]["trade"]>
 export type TradeInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
 }
@@ -716,6 +749,7 @@ export type $TradePayload<ExtArgs extends runtime.Types.Extensions.InternalArgs 
     note: string | null
     setup: string | null
     session: string | null
+    direction: string | null
     tradeDate: Date
     createdAt: Date
     updatedAt: Date
@@ -1150,6 +1184,7 @@ export interface TradeFieldRefs {
   readonly note: Prisma.FieldRef<"Trade", 'String'>
   readonly setup: Prisma.FieldRef<"Trade", 'String'>
   readonly session: Prisma.FieldRef<"Trade", 'String'>
+  readonly direction: Prisma.FieldRef<"Trade", 'String'>
   readonly tradeDate: Prisma.FieldRef<"Trade", 'DateTime'>
   readonly createdAt: Prisma.FieldRef<"Trade", 'DateTime'>
   readonly updatedAt: Prisma.FieldRef<"Trade", 'DateTime'>

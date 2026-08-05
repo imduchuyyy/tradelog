@@ -6,6 +6,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { isEmptyBlockNoteDocument, parseBlockNoteDocument } from "@/lib/blocknote-note";
 import { parseSetupTags, serializeSetupTags } from "@/lib/trade-setup";
+import { parseTradeDirection } from "@/lib/trade";
 import { getSessionFromDate } from "@/lib/utils";
 
 async function getAuthUserId() {
@@ -23,6 +24,7 @@ function readTradeForm(formData: FormData) {
   const noteValue = String(formData.get("note") || "").trim();
   const note = noteValue ? parseBlockNoteDocument(noteValue) : null;
   const setup = parseSetupTags(formData.get("setup"));
+  const direction = parseTradeDirection(formData.get("direction"));
   const tradeDate = new Date(String(formData.get("tradeDate") || ""));
 
   if (!symbol) throw new Error("Symbol is required");
@@ -35,6 +37,7 @@ function readTradeForm(formData: FormData) {
     result,
     note: note && !isEmptyBlockNoteDocument(note) ? JSON.stringify(note) : null,
     setup: serializeSetupTags(setup),
+    direction,
     tradeDate,
     session: getSessionFromDate(tradeDate),
   };

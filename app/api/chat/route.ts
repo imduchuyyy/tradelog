@@ -30,7 +30,7 @@ CONTEXT: The user has a PostgreSQL database with their trading data. You have on
 1. **queryTrades** — Run READ-ONLY SQL queries against the database
 
 DATABASE SCHEMA (PostgreSQL):
-- **"Trade"** table: id, "userId", symbol (TEXT tag, e.g. "BTCUSDT"), result (DOUBLE PRECISION money result, positive or negative), note (TEXT BlockNote JSON), setup (TEXT JSON array of setup tags), session (TEXT: "sydney"|"tokyo"|"london"|"new_york"), "tradeDate" (TIMESTAMP), "createdAt" (TIMESTAMP), "updatedAt" (TIMESTAMP)
+- **"Trade"** table: id, "userId", symbol (TEXT tag, e.g. "BTCUSDT"), result (DOUBLE PRECISION money result, positive or negative), note (TEXT BlockNote JSON), setup (TEXT JSON array of setup tags), session (TEXT: "sydney"|"tokyo"|"london"|"new_york"), direction (TEXT: "long"|"short", NULL when the trader did not record it), "tradeDate" (TIMESTAMP), "createdAt" (TIMESTAMP), "updatedAt" (TIMESTAMP)
 
 IMPORTANT RULES:
 - ALWAYS query the quoted table name "Trade" and quoted camelCase columns like "userId" and "tradeDate".
@@ -51,6 +51,7 @@ COMMON QUERIES YOU SHOULD KNOW:
 - Symbol performance: GROUP BY symbol
 - Setup performance: parse setup JSON tags and group by setup tag
 - Session performance: GROUP BY session
+- Long vs short performance: GROUP BY direction (exclude NULL direction, it means "not recorded" rather than a third category)
 - Streak analysis: order by tradeDate, count consecutive wins/losses`;
 
   // Convert UIMessage[] from useChat client to ModelMessage[] for streamText

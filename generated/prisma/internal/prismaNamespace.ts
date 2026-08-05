@@ -1105,6 +1105,7 @@ export const TradeScalarFieldEnum = {
   note: 'note',
   setup: 'setup',
   session: 'session',
+  direction: 'direction',
   tradeDate: 'tradeDate',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'

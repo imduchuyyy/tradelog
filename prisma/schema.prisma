@@ -78,6 +78,7 @@ model Trade {
   note      String?
   setup     String?
   session   String?
+  direction String? // "long" | "short" | null (not recorded)
   tradeDate DateTime @default(now())
 
   createdAt DateTime @default(now())

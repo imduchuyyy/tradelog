@@ -2,7 +2,7 @@
 
 import { useMemo, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
-import { ChevronLeft, ChevronRight, ImagePlus, Loader2, Plus, SlidersHorizontal, Tags, Trash2, X } from "lucide-react";
+import { ArrowDownRight, ArrowUpRight, ChevronLeft, ChevronRight, ImagePlus, Loader2, Plus, SlidersHorizontal, Tags, Trash2, X } from "lucide-react";
 import { format, subDays } from "date-fns";
 import { useTranslations } from "next-intl";
 import { Badge } from "@/components/ui/badge";
@@ -44,7 +44,7 @@ import {
   replacePastedImageUrls,
 } from "@/lib/blocknote-note";
 import { normalizeSetupTag, parseSetupTags, serializeSetupTags } from "@/lib/trade-setup";
-import { getTradeResult, type Trade } from "@/lib/trade";
+import { TRADE_DIRECTIONS, getTradeResult, parseTradeDirection, type Trade, type TradeDirection } from "@/lib/trade";
 import { cn } from "@/lib/utils";
 import { Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, Line, LineChart, ReferenceLine, XAxis, YAxis } from "recharts";
 
@@ -59,6 +59,7 @@ export function DashboardTab({ trades }: DashboardTabProps) {
   const [selectedSymbols, setSelectedSymbols] = useState<string[]>([]);
   const [selectedSessions, setSelectedSessions] = useState<string[]>([]);
   const [selectedSetups, setSelectedSetups] = useState<string[]>([]);
+  const [selectedDirections, setSelectedDirections] = useState<string[]>([]);
   const [startDate, setStartDate] = useState(defaultStartDate);
   const [endDate, setEndDate] = useState(defaultEndDate);
 
@@ -91,16 +92,21 @@ export function DashboardTab({ trades }: DashboardTabProps) {
       if (selectedSymbols.length > 0 && !selectedSymbols.includes(trade.symbol.trim().toUpperCase())) return false;
       if (selectedSessions.length > 0 && (!trade.session || !selectedSessions.includes(trade.session))) return false;
       if (selectedSetups.length > 0 && !selectedSetups.some((setup) => tradeSetups.includes(setup))) return false;
+      if (selectedDirections.length > 0) {
+        const direction = parseTradeDirection(trade.direction);
+
+        if (!direction || !selectedDirections.includes(direction)) return false;
+      }
 
       return true;
     });
-  }, [allSortedTrades, endDate, selectedSessions, selectedSetups, selectedSymbols, startDate]);
+  }, [allSortedTrades, endDate, selectedDirections, selectedSessions, selectedSetups, selectedSymbols, startDate]);
 
   const ENTRIES_PER_PAGE = 10;
   const [page, setPage] = useState(1);
   const totalPages = Math.max(1, Math.ceil(sortedTrades.length / ENTRIES_PER_PAGE));
 
-  const filterSignature = [selectedSymbols, selectedSessions, selectedSetups, startDate, endDate]
+  const filterSignature = [selectedSymbols, selectedSessions, selectedSetups, selectedDirections, startDate, endDate]
     .map((value) => JSON.stringify(value))
     .join("|");
   const [lastFilterSignature, setLastFilterSignature] = useState(filterSignature);
@@ -187,10 +193,11 @@ export function DashboardTab({ trades }: DashboardTabProps) {
         <CardHeader>
           <CardTitle className="text-base">{t("filters")}</CardTitle>
         </CardHeader>
-        <CardContent className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
+        <CardContent className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
           <FilterMenu label={t("symbols")} options={symbolOptions} selected={selectedSymbols} onChange={setSelectedSymbols} formatOption={(option) => `#${option}`} />
           <FilterMenu label={t("sessions")} options={sessionOptions} selected={selectedSessions} onChange={setSelectedSessions} formatOption={formatSession} />
           <FilterMenu label={t("setups")} options={setupOptions} selected={selectedSetups} onChange={setSelectedSetups} />
+          <FilterMenu label={t("directions")} options={[...TRADE_DIRECTIONS]} selected={selectedDirections} onChange={setSelectedDirections} formatOption={(option) => t(directionLabelKey(option))} />
           <div className="space-y-2">
             <Label>{t("dateRange")}</Label>
             {(() => {
@@ -355,6 +362,7 @@ export function DashboardTab({ trades }: DashboardTabProps) {
           ) : (
             paginatedTrades.map((trade) => {
               const result = Number(trade.result);
+              const direction = parseTradeDirection(trade.direction);
               return (
                 <TradeDialog key={trade.id} title={t("editJournalEntry")} trade={trade} symbolOptions={symbolOptions} setupOptions={setupOptions} triggerClassName="block">
                   <div className="rounded-md border border-border bg-background p-4 transition-colors hover:border-ring/60 hover:bg-muted/20">
@@ -362,6 +370,12 @@ export function DashboardTab({ trades }: DashboardTabProps) {
                       <div className="space-y-2">
                         <div className="flex flex-wrap items-center gap-2">
                           <Badge variant="outline">#{trade.symbol}</Badge>
+                          {direction && (
+                            <Badge variant="outline" className={cn("gap-1", directionBadgeClassName(direction))}>
+                              {direction === "long" ? <ArrowUpRight className="h-3 w-3" /> : <ArrowDownRight className="h-3 w-3" />}
+                              {t(directionLabelKey(direction))}
+                            </Badge>
+                          )}
                           <span className="text-xs text-muted-foreground">
                             {new Date(trade.tradeDate).toLocaleString()}
                           </span>
@@ -800,6 +814,10 @@ function TradeDialog({
                 <Input id={`result-${trade?.id || "new"}`} name="result" type="number" step="0.01" defaultValue={trade?.result ?? ""} placeholder={t("resultPlaceholder")} required />
               </div>
               <div className="space-y-2 sm:col-span-2">
+                <Label>{t("direction")}</Label>
+                <DirectionPicker defaultValue={parseTradeDirection(trade?.direction)} />
+              </div>
+              <div className="space-y-2 sm:col-span-2">
                 <Label>{t("timestamp")}</Label>
                 <TimestampPicker defaultValue={trade?.tradeDate} />
                 <p className="text-xs text-muted-foreground">{t("timestampHelper")}</p>
@@ -874,6 +892,48 @@ function TimestampPicker({ defaultValue }: { defaultValue?: Date | string }) {
         aria-label={t("tradeTime")}
         required
       />
+    </div>
+  );
+}
+
+function directionLabelKey(direction: string) {
+  return direction === "short" ? "directionShort" : "directionLong";
+}
+
+function directionBadgeClassName(direction: TradeDirection) {
+  return direction === "long"
+    ? "border-success/40 bg-success/10 text-success"
+    : "border-destructive/40 bg-destructive/10 text-destructive";
+}
+
+/** Long/short is optional, so an unset value submits an empty string the server parses back to null. */
+function DirectionPicker({ defaultValue }: { defaultValue: TradeDirection | null }) {
+  const t = useTranslations("dashboard.manualJournal");
+  const [direction, setDirection] = useState<TradeDirection | null>(defaultValue);
+
+  return (
+    <div className="space-y-2">
+      <input type="hidden" name="direction" value={direction || ""} />
+      <div className="grid grid-cols-2 gap-2">
+        {TRADE_DIRECTIONS.map((option) => {
+          const selected = direction === option;
+
+          return (
+            <Button
+              key={option}
+              type="button"
+              variant="outline"
+              aria-pressed={selected}
+              className={cn("gap-2 font-normal", selected && directionBadgeClassName(option))}
+              onClick={() => setDirection(selected ? null : option)}
+            >
+              {option === "long" ? <ArrowUpRight className="h-4 w-4" /> : <ArrowDownRight className="h-4 w-4" />}
+              {t(directionLabelKey(option))}
+            </Button>
+          );
+        })}
+      </div>
+      <p className="text-xs text-muted-foreground">{t("directionHelper")}</p>
     </div>
   );
 }
